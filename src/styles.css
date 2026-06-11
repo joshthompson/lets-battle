@@ -18,13 +18,26 @@ body {
 }
 
 #root {
+  width: 100vw;
   height: 100vh;
+  /* Centre the fixed-size stage; it scales down (never up) to fit the window. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* Fixed base-size canvas. App.tsx sets its width/height and a scale transform. */
+.app-stage {
+  position: relative;
+  flex: none;
+  transform-origin: center center;
 }
 
 .screen {
   position: relative;
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;

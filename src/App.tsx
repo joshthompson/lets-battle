@@ -1,4 +1,4 @@
-import { createEffect, createSignal, Match, Switch, type Component } from 'solid-js';
+import { createEffect, createSignal, onCleanup, onMount, Match, Switch, type Component } from 'solid-js';
 import { generateBattlers, type Battler } from './battlers';
 import { t } from './i18n';
 import Menu from './Menu';
@@ -12,6 +12,12 @@ type Phase = 'menu' | 'intro' | 'battle' | 'victory' | 'draw';
 
 // Dev toggle: jump straight from the menu into the battle, skipping the intro.
 const SKIP_INTRO = false;
+
+// The app is laid out at a fixed base size (the 1200x800 arena plus the HP panel
+// and some padding) and scaled down to fit smaller windows. It never scales up
+// past 1, so large windows show it at native size, centred.
+const BASE_W = 1200;
+const BASE_H = 900;
 
 const App: Component = () => {
   const [phase, setPhase] = createSignal<Phase>('menu');
@@ -30,7 +36,17 @@ const App: Component = () => {
     document.title = t('title');
   });
 
+  // Shrink the whole stage to fit the window, but never enlarge past native size.
+  const [scale, setScale] = createSignal(1);
+  const fit = () => setScale(Math.min(1, window.innerWidth / BASE_W, window.innerHeight / BASE_H));
+  onMount(() => {
+    fit();
+    window.addEventListener('resize', fit);
+    onCleanup(() => window.removeEventListener('resize', fit));
+  });
+
   return (
+    <div class="app-stage" style={{ width: `${BASE_W}px`, height: `${BASE_H}px`, transform: `scale(${scale()})` }}>
     <Switch>
       <Match when={phase() === 'menu'}>
         <Menu onStart={start} />
@@ -58,6 +74,7 @@ const App: Component = () => {
         <Draw battlers={drawn()} onDone={() => setPhase('menu')} />
       </Match>
     </Switch>
+    </div>
   );
 };
 
