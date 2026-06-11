@@ -15,9 +15,15 @@ type MovementType = 'wobble' | 'jump' | 'glide';
 export interface Battler {
   id: number;
   name: string;
+  by?: string;
   color: string;
   imageUrl?: string;
   movementType?: MovementType;
+  // Per-fighter walk-cycle timing so the roster doesn't bounce in lockstep.
+  // animSpeed scales the base duration (>1 = slower); animDelay is a negative
+  // phase offset (seconds) so fighters start at different points in the cycle.
+  animSpeed?: number;
+  animDelay?: number;
 }
 
 const NAME_POOL = [
@@ -45,11 +51,11 @@ const PRESET_BATTLERS: Omit<Battler, 'id'>[] = [
   { name: 'Psyduck', color: '#FFD700', imageUrl: psyduckImg, movementType: 'wobble' },
   { name: 'Ant Head', color: '#4d8bff', imageUrl: antHeadImg, movementType: 'glide' },
   { name: 'Bolt', color: '#ff5a3c', imageUrl: boltImage, movementType: 'jump' },
-  { name: 'Monkey', color: '#FFA500', imageUrl: monkeyImg, movementType: 'wobble' },
-  { name: 'Cabbage', color: '#32CD32', imageUrl: cabbageImg, movementType: 'jump' },
+  { name: 'Monkatt', by: 'Alisa', color: '#FFA500', imageUrl: monkeyImg, movementType: 'wobble' },
+  { name: 'Lady Cabbage', by: 'Alisa', color: '#32CD32', imageUrl: cabbageImg, movementType: 'jump' },
   { name: 'Mr Hoppy', color: '#8B4513', imageUrl: mrHoppyImg, movementType: 'jump' },
-  { name: 'Spiker', color: '#708090', imageUrl: spikerImg, movementType: 'glide' },
-  { name: 'Fish Eyes', color: '#20B2AA', imageUrl: fishEyesImg, movementType: 'wobble' },
+  { name: 'Spiker', by: 'Olesia', color: '#708090', imageUrl: spikerImg, movementType: 'glide' },
+  { name: 'Fish Eyes', by: 'Alisa', color: '#20B2AA', imageUrl: fishEyesImg, movementType: 'wobble' },
 ];
 
 function shuffle<T>(arr: T[]): T[] {
@@ -87,7 +93,14 @@ export function generateBattlers(count = 8): Battler[] {
     movementType: ['wobble', 'jump', 'glide'][Math.floor(Math.random() * 3)] as MovementType,
   }));
 
-  return [...presets, ...generated];
+  // Give every fighter (presets included) its own walk-cycle timing so they
+  // don't all bounce/wobble in sync. ~0.75x–1.35x speed, with a random phase
+  // offset of up to a full second.
+  return [...presets, ...generated].map((b) => ({
+    ...b,
+    animSpeed: 0.75 + Math.random() * 0.6,
+    animDelay: Math.random(),
+  }));
 }
 
 // A default roster, generated once at module load.

@@ -10,7 +10,7 @@ import './styles.css';
 type Phase = 'menu' | 'intro' | 'battle' | 'victory' | 'draw';
 
 // Dev toggle: jump straight from the menu into the battle, skipping the intro.
-const SKIP_INTRO = true;
+const SKIP_INTRO = false;
 
 const App: Component = () => {
   const [phase, setPhase] = createSignal<Phase>('menu');

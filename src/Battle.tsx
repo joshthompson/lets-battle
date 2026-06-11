@@ -82,6 +82,7 @@ interface Entity extends Battler {
   shieldOpacity: number; // current shield-circle opacity (display)
   strengthUntil: number; // timestamp the strength buff ends
   speedUntil: number; // timestamp the speed buff ends
+  speedActive: boolean; // display: speed buff currently active (speeds the walk cycle)
   scale: number; // current sprite scale (display; 1 or STRENGTH_SCALE)
   nextAttack: number; // timestamp the fighter may attack again
   nextRetarget: number; // timestamp to re-pick a heading
@@ -129,6 +130,7 @@ export default function Battle(props: {
       shieldOpacity: 0,
       strengthUntil: 0,
       speedUntil: 0,
+      speedActive: false,
       scale: 1,
       nextAttack: now0 + Math.random() * 400,
       nextRetarget: now0 + 500 + Math.random() * 1000,
@@ -286,6 +288,7 @@ export default function Battle(props: {
 
           // Speed power-up scales the step (so it kicks in/out immediately).
           const sm = now < e.speedUntil ? SPEED_MULT : 1;
+          e.speedActive = sm > 1; // also speeds up the walk-cycle animation
           const nx = e.x + e.vx * dt * sm;
           const ny = e.y + e.vy * dt * sm;
           if (insideEllipse(nx, ny)) {
@@ -486,7 +489,15 @@ export default function Battle(props: {
                   style={{ transform: `scaleX(${e.facing * e.scale}) scaleY(${e.scale})` }}
                 >
                   {/* body carries the walk animation, so the shield rides along */}
-                  <div class="fighter-body">
+                  <div
+                    class="fighter-body"
+                    style={{
+                      // Smaller value = shorter duration = faster cycle; the
+                      // speed power-up shortens it by SPEED_MULT to match.
+                      '--anim-speed': (e.animSpeed ?? 1) / (e.speedActive ? SPEED_MULT : 1),
+                      '--anim-delay': `${-(e.animDelay ?? 0)}s`,
+                    }}
+                  >
                     <BattlerSprite
                       battler={e}
                       width={sizes[e.id].w}

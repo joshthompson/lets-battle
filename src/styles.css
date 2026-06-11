@@ -207,6 +207,17 @@ body {
   text-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
 }
 
+.intro-by {
+  margin-top: 6px;
+  font-size: 24px;
+  font-weight: 600;
+  font-style: italic;
+  letter-spacing: 2px;
+  color: #fff;
+  opacity: 0.75;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.4);
+}
+
 .intro-vs {
   font-size: 28px;
   font-weight: 700;
@@ -471,7 +482,8 @@ body {
 /* wobble: rock ±5deg, pivoting near the feet (centred, ~10px up from bottom) */
 .fighter.move-wobble .fighter-body {
   transform-origin: 50% calc(100% - 10px);
-  animation: move-wobble 0.5s ease-in-out infinite;
+  animation: move-wobble calc(0.5s * var(--anim-speed, 1)) ease-in-out infinite;
+  animation-delay: var(--anim-delay, 0s);
 }
 
 @keyframes move-wobble {
@@ -488,7 +500,8 @@ body {
    pivoting from the floor so the squash flattens onto the ground */
 .fighter.move-jump .fighter-body {
   transform-origin: 50% 100%;
-  animation: move-jump 0.7s infinite;
+  animation: move-jump calc(0.7s * var(--anim-speed, 1)) infinite;
+  animation-delay: var(--anim-delay, 0s);
 }
 
 @keyframes move-jump {
@@ -648,6 +661,16 @@ body {
   text-transform: uppercase;
   letter-spacing: 6px;
   text-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+}
+
+.victory-by {
+  margin-top: 6px;
+  font-size: 22px;
+  font-weight: 600;
+  font-style: italic;
+  letter-spacing: 2px;
+  opacity: 0.75;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.4);
 }
 
 /* ---------- Draw ---------- */

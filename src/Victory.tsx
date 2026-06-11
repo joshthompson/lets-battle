@@ -1,4 +1,4 @@
-import { onCleanup } from 'solid-js';
+import { onCleanup, Show } from 'solid-js';
 import type { Battler } from './battlers';
 import Streaks from './Streaks';
 import BattlerSprite from './BattlerSprite';
@@ -16,6 +16,9 @@ export default function Victory(props: { winner: Battler; onDone: () => void }) 
       <div class="victory-banner">Winner</div>
       <BattlerSprite battler={props.winner} width={280} height={420} class="victory-fighter" />
       <div class="victory-name">{props.winner.name}</div>
+      <Show when={props.winner.by}>
+        <div class="victory-by">by {props.winner.by}</div>
+      </Show>
       <button class="start-btn" style={{ 'margin-top': '32px' }} onClick={props.onDone}>
         Menu
       </button>

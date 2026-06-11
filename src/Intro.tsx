@@ -43,6 +43,9 @@ export default function Intro(props: { battlers: Battler[]; onDone: () => void }
             >
               <BattlerSprite battler={b} width={240} height={360} class="intro-fighter" />
               <div class="intro-name">{b.name}</div>
+              <Show when={b.by}>
+                <div class="intro-by">by {b.by}</div>
+              </Show>
               <div class="intro-vs">
                 Fighter {index() + 1} / {props.battlers.length}
               </div>
