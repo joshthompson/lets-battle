@@ -9,13 +9,14 @@ import cabbageImg from './assets/battlers/cabbage.png';
 import mrHoppyImg from './assets/battlers/mr-hoppy.png';
 import spikerImg from './assets/battlers/spiker.png';
 import fishEyesImg from './assets/battlers/fish-eyes.png';
+import { LocaleText } from './i18n';
 
 type MovementType = 'wobble' | 'jump' | 'glide';
 
 export interface Battler {
   id: number;
-  name: string;
-  by?: string;
+  name: LocaleText;
+  artist?: LocaleText;
   color: string;
   imageUrl?: string;
   movementType?: MovementType;
@@ -48,14 +49,58 @@ const NAME_POOL = [
 // Hand-authored fighters with real artwork. generateBattlers always seeds the
 // roster from these first, then tops up with random ones.
 const PRESET_BATTLERS: Omit<Battler, 'id'>[] = [
-  { name: 'Psyduck', color: '#FFD700', imageUrl: psyduckImg, movementType: 'wobble' },
-  { name: 'Ant Head', color: '#4d8bff', imageUrl: antHeadImg, movementType: 'glide' },
-  { name: 'Bolt', color: '#ff5a3c', imageUrl: boltImage, movementType: 'jump' },
-  { name: 'Monkatt', by: 'Alisa', color: '#FFA500', imageUrl: monkeyImg, movementType: 'wobble' },
-  { name: 'Lady Cabbage', by: 'Alisa', color: '#32CD32', imageUrl: cabbageImg, movementType: 'jump' },
-  { name: 'Mr Hoppy', color: '#8B4513', imageUrl: mrHoppyImg, movementType: 'jump' },
-  { name: 'Spiker', by: 'Olesia', color: '#708090', imageUrl: spikerImg, movementType: 'glide' },
-  { name: 'Fish Eyes', by: 'Alisa', color: '#20B2AA', imageUrl: fishEyesImg, movementType: 'wobble' },
+  {
+    name: { en: 'Psyduck', ru: 'Псайдак' },
+    color: '#FFD700',
+    imageUrl: psyduckImg,
+    movementType: 'wobble',
+  },
+  {
+    name: { en: 'Ant Head', ru: 'Челомура' },
+    color: '#4d8bff',
+    imageUrl: antHeadImg,
+    movementType: 'glide',
+  },
+  {
+    name: { en: 'Bolt', ru: 'Болт' },
+    color: '#ff5a3c',
+    imageUrl: boltImage,
+    movementType: 'jump',
+  },
+  {
+    name: { en: 'Monkatt', ru: 'Обезкот' },
+    artist: { en: 'Alisa', ru: 'Алиса' },
+    color: '#FFA500',
+    imageUrl: monkeyImg,
+    movementType: 'wobble',
+  },
+  {
+    name: { en: 'Lady Cabbage', ru: 'Леди Капуста' },
+    artist: { en: 'Alisa', ru: 'Алиса' },
+    color: '#32CD32',
+    imageUrl: cabbageImg,
+    movementType: 'jump',
+  },
+  {
+    name: { en: 'Mr Hoppy', ru: 'Мистер Хоппи' },
+    color: '#8B4513',
+    imageUrl: mrHoppyImg,
+    movementType: 'jump',
+  },
+  {
+    name: { en: 'Spiker', ru: 'Шпикер' },
+    artist: { en: 'Olesia', ru: 'Олеся' },
+    color: '#708090',
+    imageUrl: spikerImg,
+    movementType: 'glide',
+  },
+  {
+    name: { en: 'Fish Eyes', ru: 'Рыбий Глаз' },
+    artist: { en: 'Alisa', ru: 'Алиса' },
+    color: '#20B2AA',
+    imageUrl: fishEyesImg,
+    movementType: 'wobble',
+  },
 ];
 
 function shuffle<T>(arr: T[]): T[] {

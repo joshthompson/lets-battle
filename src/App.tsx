@@ -1,5 +1,6 @@
-import { createSignal, Match, Switch, type Component } from 'solid-js';
+import { createEffect, createSignal, Match, Switch, type Component } from 'solid-js';
 import { generateBattlers, type Battler } from './battlers';
+import { t } from './i18n';
 import Menu from './Menu';
 import Intro from './Intro';
 import Battle from './Battle';
@@ -23,6 +24,11 @@ const App: Component = () => {
     setRoster(generateBattlers(8));
     setPhase(SKIP_INTRO ? 'battle' : 'intro');
   };
+
+  // Keep the document title in sync with the chosen locale.
+  createEffect(() => {
+    document.title = t('title');
+  });
 
   return (
     <Switch>

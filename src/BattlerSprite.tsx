@@ -1,6 +1,7 @@
 import { Show } from 'solid-js';
 import type { JSX } from 'solid-js';
 import type { Battler } from './battlers';
+import { tx } from './i18n';
 
 const DAMAGE_COLOR = '#ff2424';
 const HEAL_COLOR = '#2ee65a';
@@ -47,7 +48,7 @@ export default function BattlerSprite(props: {
           </>
         }
       >
-        <img src={props.battler.imageUrl} alt={props.battler.name} draggable={false} />
+        <img src={props.battler.imageUrl} alt={tx(props.battler.name)} draggable={false} />
         <div
           class="attack-flash flash-mask"
           style={{

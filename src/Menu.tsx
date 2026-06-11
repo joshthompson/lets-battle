@@ -1,12 +1,16 @@
+import { t } from './i18n';
+import LanguageToggle from './LanguageToggle';
+
 export default function Menu(props: { onStart: () => void }) {
   return (
     <div class="screen">
+      <LanguageToggle />
       <h1 class="menu-logo">
-        <span class="lets">Let's</span>
-        Battle
+        <span class="lets">{t('lets')}</span>
+        {t('battle')}
       </h1>
       <button class="start-btn" onClick={props.onStart}>
-        Start
+        {t('start')}
       </button>
     </div>
   );

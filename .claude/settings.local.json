@@ -23,7 +23,8 @@
       "Bash(rm -f /tmp/zt4.png)",
       "Bash(\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\" --headless=new --disable-gpu --window-size=300,320 --screenshot=/tmp/zt4.png \"file:///tmp/zt4.html\")",
       "Bash(curl -s \"http://localhost:3001/src/Battle.tsx\")",
-      "Bash(curl -s \"http://localhost:3000/src/Battle.tsx\")"
+      "Bash(curl -s \"http://localhost:3000/src/Battle.tsx\")",
+      "Bash(BASE_PATH=/lets-battle/ pnpm build)"
     ]
   }
 }

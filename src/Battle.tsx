@@ -2,6 +2,7 @@ import { createStore, produce } from 'solid-js/store';
 import { createSignal, For, onCleanup, onMount } from 'solid-js';
 import type { Battler } from './battlers';
 import BattlerSprite from './BattlerSprite';
+import { tx } from './i18n';
 import arenaImg from './assets/arena.jpg';
 import { POWER_UPS, type PowerUpType } from './powerups';
 
@@ -429,7 +430,7 @@ export default function Battle(props: {
           {(e) => (
             <div class={`hp-row${e.ko ? ' dead' : ''}`}>
               <div class="hp-chip" style={{ background: e.color }} />
-              <span>{e.name}</span>
+              <span>{tx(e.name)}</span>
               <div class="hp-bar">
                 <div class="hp-bar-fill" style={{ width: `${e.hp}%` }} />
               </div>
@@ -465,7 +466,7 @@ export default function Battle(props: {
                 class="fighter-shadow"
                 style={{ width: `${(e.ko ? sizes[e.id].h : sizes[e.id].w) * e.scale}px` }}
               />
-              <span class="label">{e.name}</span>
+              <span class="label">{tx(e.name)}</span>
               <div
                 class={`fighter${e.ko ? ' ko' : ''}${
                   jumping() && e.id === championId() ? ' jumping' : ''
