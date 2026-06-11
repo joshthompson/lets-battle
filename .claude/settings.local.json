@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(npx vite *)",
+      "Read(//tmp/**)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/)",
+      "Bash(pkill -f \"vite --port 5173\")",
+      "Bash(\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\" --headless=new --disable-gpu --dump-dom \"file:///tmp/zt2.html\")",
+      "Bash(\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\" --headless=new --disable-gpu --force-device-scale-factor=1 --window-size=300,320 --screenshot=/tmp/zt2.png \"file:///tmp/zt2.html\")",
+      "Bash(echo \"shot exit $?\")",
+      "Bash(python3 -)",
+      "Bash(node -e \"const z=require\\('zlib'\\);const fs=require\\('fs'\\);const b=fs.readFileSync\\('/tmp/zt2.png'\\);let p=8,W,H,idat=[];while\\(p<b.length\\){const len=b.readUInt32BE\\(p\\);const t=b.toString\\('ascii',p+4,p+8\\);const d=b.slice\\(p+8,p+8+len\\);if\\(t==='IHDR'\\){W=d.readUInt32BE\\(0\\);H=d.readUInt32BE\\(4\\);}if\\(t==='IDAT'\\)idat.push\\(d\\);if\\(t==='IEND'\\)break;p+=12+len;}const raw=z.inflateSync\\(Buffer.concat\\(idat\\)\\);const bpp=4;const stride=W*bpp+1;function px\\(x,y\\){const row=raw.slice\\(y*stride,\\(y+1\\)*stride\\);const ft=row[0];/*assume filter 0 for simplicity may be wrong*/const o=1+x*bpp;return [row[o],row[o+1],row[o+2]];}console.log\\('W,H',W,H\\);console.log\\('note: filters ignored'\\);\")",
+      "Bash(node -e ' *)",
+      "Bash(cat)",
+      "Bash(rm -f /tmp/zt3.png)",
+      "Bash(\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\" --headless --disable-gpu --hide-scrollbars --force-device-scale-factor=1 --window-size=300,320 --default-background-color=FFFFFFFF --screenshot=/tmp/zt3.png \"file:///tmp/zt3.html\")",
+      "Bash(printf '<!doctype html><body style=\"margin:0;background:#ff0000;width:100px;height:100px\"></body>')",
+      "Bash(rm -f /tmp/red.png)",
+      "Bash(\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\" --headless=new --disable-gpu --window-size=100,100 --screenshot=/tmp/red.png \"file:///tmp/red.html\")",
+      "Bash(node -e 'const z=require\\(\"zlib\"\\),fs=require\\(\"fs\"\\);const b=fs.readFileSync\\(\"/tmp/red.png\"\\);let p=8,W,H,idat=[];while\\(p<b.length\\){const len=b.readUInt32BE\\(p\\);const t=b.toString\\(\"ascii\",p+4,p+8\\);const d=b.slice\\(p+8,p+8+len\\);if\\(t===\"IHDR\"\\){W=d.readUInt32BE\\(0\\);H=d.readUInt32BE\\(4\\);}if\\(t===\"IDAT\"\\)idat.push\\(d\\);if\\(t===\"IEND\"\\)break;p+=12+len;}const raw=z.inflateSync\\(Buffer.concat\\(idat\\)\\);const stride=W*4,out=Buffer.alloc\\(H*stride\\);let pos=0;for\\(let y=0;y<H;y++\\){pos++;for\\(let i=0;i<stride;i++\\){out[y*stride+i]=raw[pos++];}}console.log\\(\"first pixel raw filterless:\",out[0],out[1],out[2]\\);')",
+      "Bash(rm -f /tmp/zt4.png)",
+      "Bash(\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\" --headless=new --disable-gpu --window-size=300,320 --screenshot=/tmp/zt4.png \"file:///tmp/zt4.html\")",
+      "Bash(curl -s \"http://localhost:3001/src/Battle.tsx\")",
+      "Bash(curl -s \"http://localhost:3000/src/Battle.tsx\")"
+    ]
+  }
+}

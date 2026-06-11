@@ -1,0 +1,695 @@
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  --page-bg: #0a0a0f;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--page-bg);
+  color: #fff;
+  font-family: 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
+  overflow: hidden;
+}
+
+#root {
+  height: 100vh;
+}
+
+.screen {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* ---------- Menu ---------- */
+
+.menu-logo {
+  font-size: 84px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, #ff4d4d, #ffd24d, #4dd2ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 0 40px rgba(255, 80, 80, 0.4);
+  animation: logo-pop 0.6s ease-out;
+  margin: 0;
+}
+
+.menu-logo .lets {
+  display: block;
+  font-size: 36px;
+  letter-spacing: 12px;
+  -webkit-text-fill-color: #fff;
+  color: #fff;
+}
+
+@keyframes logo-pop {
+  from {
+    transform: scale(0.6) rotate(-4deg);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
+}
+
+.start-btn {
+  margin-top: 48px;
+  padding: 18px 56px;
+  font-size: 28px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  color: #fff;
+  background: linear-gradient(135deg, #ff4d4d, #b30000);
+  border: 3px solid #fff;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 8px 0 #800000, 0 12px 24px rgba(0, 0, 0, 0.5);
+  transition: transform 0.08s ease;
+}
+
+.start-btn:hover {
+  transform: translateY(-2px);
+}
+
+.start-btn:active {
+  transform: translateY(6px);
+  box-shadow: 0 2px 0 #800000;
+}
+
+/* ---------- Intro ---------- */
+
+.intro {
+  align-items: center;
+  justify-content: center;
+}
+
+.intro-card {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: intro-enter 0.5s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+@keyframes intro-enter {
+  from {
+    transform: translateX(-120px) scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* A pool of entrance animations; Intro picks a different one per fighter. */
+@keyframes intro-left {
+  from {
+    transform: translateX(-160px) scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes intro-right {
+  from {
+    transform: translateX(160px) scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes intro-zoom {
+  from {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes intro-drop {
+  from {
+    transform: translateY(-180px) scale(0.85);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes intro-rise {
+  from {
+    transform: translateY(180px) scale(0.85);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes intro-spin {
+  from {
+    transform: rotate(-18deg) scale(0.5);
+    opacity: 0;
+  }
+  to {
+    transform: rotate(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.intro-fighter {
+  border: 4px solid #fff;
+  box-shadow: 0 0 0 6px rgba(0, 0, 0, 0.3), 0 20px 50px rgba(0, 0, 0, 0.6);
+}
+
+/* With artwork, drop the framed colour box and show just the sprite. */
+.intro-fighter.has-image {
+  border: none;
+  box-shadow: none;
+}
+
+.intro-name {
+  margin-top: 32px;
+  font-size: 72px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 6px;
+  color: #fff;
+  text-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+}
+
+.intro-vs {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  opacity: 0.8;
+  margin-top: 8px;
+}
+
+/* ---------- Anime speed streaks ---------- */
+
+.streaks {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.streak {
+  --a: 0deg; /* tilt of this streak, set inline */
+  position: absolute;
+  top: -60%;
+  width: 6px;
+  height: 60%;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.85) 100%
+  );
+  animation: streak-fall linear infinite;
+}
+
+/* Rotate first, then fall along the streak's own axis, so a tilted streak
+   travels diagonally in the direction it points. */
+@keyframes streak-fall {
+  from {
+    transform: rotate(var(--a)) translateY(0);
+  }
+  to {
+    transform: rotate(var(--a)) translateY(260vh);
+  }
+}
+
+/* ---------- Battler sprite ---------- */
+
+.battler-sprite {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.battler-sprite img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  /* contained, but standing on the floor (anchored to the bottom) */
+  object-position: center bottom;
+  display: block;
+  user-select: none;
+}
+
+/* Red "got hit" overlay. Opacity is driven from the battle loop. */
+.attack-flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* No artwork: just a flat red fill over the colour block. */
+.attack-flash.flash-solid {
+  background: #ff2424;
+}
+
+/* Artwork: a solid red layer masked by the image's alpha, so only the
+   character lights up red. Aligned bottom-centre to match the image. */
+.attack-flash.flash-mask {
+  background: #ff2424;
+  mask-size: contain;
+  mask-position: center bottom;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  -webkit-mask-position: center bottom;
+  -webkit-mask-repeat: no-repeat;
+}
+
+/* ---------- Battle ---------- */
+
+.battle {
+  justify-content: flex-start;
+  padding-top: 16px;
+}
+
+.hp-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  justify-content: center;
+  max-width: 820px;
+  margin-bottom: 14px;
+}
+
+.hp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  min-width: 150px;
+}
+
+.hp-row.dead {
+  opacity: 0.4;
+  text-decoration: line-through;
+}
+
+.hp-chip {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  flex-shrink: 0;
+}
+
+.hp-bar {
+  position: relative;
+  width: 90px;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.hp-bar-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left;
+  background: linear-gradient(90deg, #4dff88, #ffd24d);
+  transition: width 0.15s linear;
+}
+
+
+
+.arena {
+  position: relative;
+  /* content-box so the var-driven width/height matches the coordinate space the
+     fighters and floor are positioned in (absolute children sit inside the
+     border, so the border must not eat into the 1200x800 logical area). */
+  box-sizing: content-box;
+  width: var(--arena-w, 1200px);
+  height: var(--arena-h, 800px);
+  background: radial-gradient(ellipse at center, #2a2a40 0%, #14141f 70%, #0a0a12 100%);
+  /* box-shadow: inset 0 0 60px rgba(0, 0, 0, 1), 0 0 40px rgba(0, 0, 0, 1); */
+  box-shadow: inset 0 0 20px 40px var(--page-bg);
+  background-size: cover;
+}
+
+.arena-floor {
+  position: absolute;
+  inset: var(--floor-top) var(--floor-right) var(--floor-bottom) var(--floor-left);
+  border-radius: 50%;
+}
+
+/* Positioning box: holds the ground shadow, the name, and the fighter body. */
+.fighter-wrap {
+  position: absolute;
+  width: 60px;
+  height: 90px;
+  will-change: left, top;
+}
+
+/* Oval ground shadow under every fighter, darkest in the centre. Width is set
+   inline to match the fighter's footprint (its height when knocked out). */
+.fighter-shadow {
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  height: 16px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0) 70%);
+  pointer-events: none;
+}
+
+/* The body fills the wrapper; KO rotation and the victory jump apply here so
+   the shadow stays put on the ground. */
+.fighter {
+  position: absolute;
+  inset: 0;
+  transition: opacity 0.3s ease, transform 0.15s ease;
+}
+
+/* Mirrors the sprite to face its travel direction. Lives between .fighter
+   (KO rotation / victory jump) and .battler-sprite (walk animation) so it never
+   clobbers either transform. The quick transition reads as a turn-around. */
+.fighter-flip {
+  width: 100%;
+  height: 100%;
+  /* the sprite may be narrower/shorter than the box (aspect-fitted); keep it
+     standing on the floor, centred horizontally */
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  /* grow from the feet so the strength scale-up keeps them on the floor */
+  transform-origin: 50% 100%;
+  transition: transform 0.12s ease;
+}
+
+/* Only the colour-block (art-less) fighters get the defining border. */
+.fighter .battler-sprite:not(.has-image) {
+  border: 2px solid rgba(0, 0, 0, 0.3);
+}
+
+.fighter-wrap .label {
+  position: absolute;
+  bottom: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  text-shadow: 1px 1px 0 #000;
+  z-index: 1;
+}
+
+/* The box rotates about its centre, but the sprite sits at the box's bottom, so
+   after a 90deg turn it floats above (and off-centre from) the floor. --ko-dx /
+   --ko-dy (set inline per fighter from its sprite size) translate it back so it
+   lands on the shadow. */
+.fighter.ko {
+  opacity: 0.5;
+  transform: translate(var(--ko-dx, 0px), var(--ko-dy, 0px)) rotate(var(--ko-rot, 90deg));
+}
+
+.fighter.jumping {
+  animation: fighter-jump 0.5s ease-in-out infinite;
+}
+
+@keyframes fighter-jump {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-26px);
+  }
+}
+
+/* ---------- Movement animations ----------
+   These run on the inner sprite (not .fighter) so they never fight the KO
+   rotation or the victory jump, which live on .fighter itself. */
+
+/* The body wraps the sprite + shield so the walk animation moves both together;
+   it shrink-wraps the sprite and centres the (larger) shield on it. */
+.fighter-body {
+  position: relative;
+  display: flex;
+}
+
+/* wobble: rock ±5deg, pivoting near the feet (centred, ~10px up from bottom) */
+.fighter.move-wobble .fighter-body {
+  transform-origin: 50% calc(100% - 10px);
+  animation: move-wobble 0.5s ease-in-out infinite;
+}
+
+@keyframes move-wobble {
+  0%,
+  100% {
+    transform: rotate(-5deg);
+  }
+  50% {
+    transform: rotate(5deg);
+  }
+}
+
+/* jump: bounce like a rubber ball — squash on impact, stretch in the air,
+   pivoting from the floor so the squash flattens onto the ground */
+.fighter.move-jump .fighter-body {
+  transform-origin: 50% 100%;
+  animation: move-jump 0.7s infinite;
+}
+
+@keyframes move-jump {
+  0% {
+    transform: translateY(0) scaleX(1.18) scaleY(0.82);
+    animation-timing-function: ease-out;
+  }
+  18% {
+    transform: translateY(-4px) scaleX(1) scaleY(1);
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.4, 1);
+  }
+  50% {
+    transform: translateY(-24px) scaleX(0.96) scaleY(1.06);
+    animation-timing-function: cubic-bezier(0.6, 0, 0.8, 0.3);
+  }
+  82% {
+    transform: translateY(-4px) scaleX(1) scaleY(1);
+    animation-timing-function: ease-in;
+  }
+  100% {
+    transform: translateY(0) scaleX(1.18) scaleY(0.82);
+  }
+}
+
+/* Stop the walk cycle when knocked out or during the victory jump. */
+.fighter.ko .fighter-body,
+.fighter.jumping .fighter-body {
+  animation: none;
+  transform: none;
+}
+
+/* Shield bubble: a faint blue circle over the player. Opacity is driven from
+   the loop (full while active, fading out at the end). */
+.shield {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 84px;
+  height: 84px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: #4696ff88;
+  border: 2px solid rgba(120, 190, 255, 0.5);
+  box-shadow: 0 0 16px rgba(80, 160, 255, 0.4);
+  pointer-events: none;
+  /* sits in front of the sprite (later sibling inside .fighter-body) */
+  z-index: 20;
+}
+
+/* ---------- Power-ups ---------- */
+
+.powerup-wrap {
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  pointer-events: none;
+  animation: powerup-in 0.5s ease both;
+}
+
+@keyframes powerup-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.powerup-shadow {
+  position: absolute;
+  left: 50%;
+  bottom: -4px;
+  width: 40px;
+  height: 12px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0) 70%);
+}
+
+.powerup {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  /* bob up and down off the floor */
+  transform-origin: 50% 100%;
+  animation: powerup-bob 1s ease-in-out infinite;
+}
+
+@keyframes powerup-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* ---------- Victory ---------- */
+
+.victory {
+  z-index: 5;
+}
+
+.victory-banner {
+  font-size: 40px;
+  font-weight: 900;
+  letter-spacing: 8px;
+  text-transform: uppercase;
+  color: #ffd24d;
+  text-shadow: 0 0 30px rgba(255, 210, 77, 0.7);
+  animation: blink 0.8s steps(2, start) infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.victory-fighter {
+  margin: 40px 0;
+  border: 5px solid #ffd24d;
+  box-shadow: 0 0 40px rgba(255, 210, 77, 0.8);
+  animation: victory-spin 2.4s ease-in-out infinite;
+}
+
+/* With artwork, drop the framed colour box and show just the sprite. */
+.victory-fighter.has-image {
+  border: none;
+  box-shadow: none;
+}
+
+@keyframes victory-spin {
+  0% {
+    transform: scale(1) rotate(0);
+  }
+  25% {
+    transform: scale(1.3) rotate(-8deg);
+  }
+  50% {
+    transform: scale(1.1) rotate(0);
+  }
+  75% {
+    transform: scale(1.3) rotate(8deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+
+.victory-name {
+  font-size: 64px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 6px;
+  text-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+}
+
+/* ---------- Draw ---------- */
+
+.draw {
+  z-index: 5;
+  background: radial-gradient(ellipse at center, #2a2a40 0%, #14141f 70%, #0a0a12 100%);
+}
+
+.draw-row {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+  justify-content: center;
+  align-items: flex-end;
+  max-width: 90vw;
+  margin: 32px 0;
+}
+
+.draw-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.draw-fighter {
+  border: 4px solid #fff;
+  box-shadow: 0 0 0 6px rgba(0, 0, 0, 0.3), 0 14px 36px rgba(0, 0, 0, 0.6);
+}
+
+.draw-fighter.has-image {
+  border: none;
+  box-shadow: none;
+}
+
+.draw-name {
+  font-size: 28px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.5);
+}
