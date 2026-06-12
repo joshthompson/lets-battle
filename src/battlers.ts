@@ -1,6 +1,5 @@
-// Battler data. Some are hand-authored presets with real artwork; the rest are
-// randomly generated. Each renders as a 60x90 sprite (background colour with the
-// image centred and contained on top).
+// Battler data. Hand-authored fighters with real artwork. Each renders as a
+// 60x90 sprite (background colour with the image centred and contained on top).
 import psyduckImg from './assets/battlers/psyduck.png';
 import antHeadImg from './assets/battlers/ant-head.png';
 import boltImage from './assets/battlers/bolt.png';
@@ -9,6 +8,8 @@ import cabbageImg from './assets/battlers/cabbage.png';
 import mrHoppyImg from './assets/battlers/mr-hoppy.png';
 import spikerImg from './assets/battlers/spiker.png';
 import fishEyesImg from './assets/battlers/fish-eyes.png';
+import chickenPantsImg from './assets/battlers/chicken-pants.png';
+import fergusImg from './assets/battlers/fergus.png';
 import { LocaleText } from './i18n';
 
 type MovementType = 'wobble' | 'jump' | 'glide';
@@ -27,27 +28,8 @@ export interface Battler {
   animDelay?: number;
 }
 
-const NAME_POOL = [
-  'Blaze',
-  'Vortex',
-  'Razor',
-  'Tempest',
-  'Onyx',
-  'Specter',
-  'Titan',
-  'Echo',
-  'Rogue',
-  'Cinder',
-  'Havoc',
-  'Frost',
-  'Talon',
-  'Nyx',
-  'Surge',
-  'Drift',
-];
-
-// Hand-authored fighters with real artwork. generateBattlers always seeds the
-// roster from these first, then tops up with random ones.
+// The full roster. generateBattlers returns all of these, or a random subset
+// when a cap is given.
 const PRESET_BATTLERS: Omit<Battler, 'id'>[] = [
   {
     name: { en: 'Psyduck', ru: 'Псайдак' },
@@ -88,7 +70,7 @@ const PRESET_BATTLERS: Omit<Battler, 'id'>[] = [
     movementType: 'jump',
   },
   {
-    name: { en: 'Spiker', ru: 'Шпикер' },
+    name: { en: 'Chupapi', ru: 'Чупапи' },
     artist: { en: 'Olesia', ru: 'Олеся' },
     color: '#708090',
     imageUrl: spikerImg,
@@ -101,7 +83,36 @@ const PRESET_BATTLERS: Omit<Battler, 'id'>[] = [
     imageUrl: fishEyesImg,
     movementType: 'wobble',
   },
+  {
+    name: { en: 'Chicken Pants', ru: 'Куриные Штаны' },
+    artist: { en: 'Irina', ru: 'Ирина' },
+    color: '#FF69B4',
+    imageUrl: chickenPantsImg,
+    movementType: 'wobble',
+  },
+  {
+    name: { en: 'Fergus', ru: 'Фергус' },
+    artist: { en: 'Irina', ru: 'Ирина' },
+    color: '#FF69B4',
+    imageUrl: fergusImg,
+    movementType: 'jump',
+  },
 ];
+
+// Unique artist credits across the roster, in first-appearance order. Deduped
+// by the English name so the same artist isn't listed twice.
+export function uniqueArtists(): LocaleText[] {
+  const seen = new Set<string>();
+  const out: LocaleText[] = [];
+  for (const b of PRESET_BATTLERS) {
+    if (!b.artist) continue;
+    const key = typeof b.artist === 'string' ? b.artist : (b.artist.en ?? JSON.stringify(b.artist));
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(b.artist);
+  }
+  return out;
+}
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -112,41 +123,20 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-function randomColor(index: number, total: number): string {
-  // Spread hues evenly so the roster reads as visually distinct, with a little
-  // jitter so it still feels random.
-  const hue = Math.floor((360 / total) * index + Math.random() * 20);
-  const sat = 65 + Math.floor(Math.random() * 25);
-  const light = 45 + Math.floor(Math.random() * 15);
-  return `hsl(${hue}, ${sat}%, ${light}%)`;
-}
-
-export function generateBattlers(count = 8): Battler[] {
-  // Always start with the presets, then fill the rest with random fighters.
-  const presets = PRESET_BATTLERS.slice(0, count).map((b, i) => ({ ...b, id: i }));
-  const remaining = count - presets.length;
-
-  const usedNames = new Set(presets.map((b) => b.name));
-  const names = shuffle(NAME_POOL)
-    .filter((n) => !usedNames.has(n))
-    .slice(0, remaining);
-
-  const generated = names.map((name, i) => ({
-    id: presets.length + i,
-    name,
-    color: randomColor(presets.length + i, count),
-    movementType: ['wobble', 'jump', 'glide'][Math.floor(Math.random() * 3)] as MovementType,
-  }));
-
-  // Give every fighter (presets included) its own walk-cycle timing so they
-  // don't all bounce/wobble in sync. ~0.75x–1.35x speed, with a random phase
-  // offset of up to a full second.
-  return [...presets, ...generated].map((b) => ({
+// Returns the roster in a random order — the full set, or a random selection of
+// `count` fighters when capped. Every fighter gets its own walk-cycle timing so
+// they don't all bounce/wobble in sync (~0.75x–1.35x speed, with a random phase
+// offset of up to a full second).
+export function generateBattlers(count?: number): Battler[] {
+  const shuffled = shuffle(PRESET_BATTLERS);
+  const chosen = count == null ? shuffled : shuffled.slice(0, count);
+  return chosen.map((b, i) => ({
     ...b,
+    id: i,
     animSpeed: 0.75 + Math.random() * 0.6,
     animDelay: Math.random(),
   }));
 }
 
 // A default roster, generated once at module load.
-export const battlers: Battler[] = generateBattlers(8);
+export const battlers: Battler[] = generateBattlers();

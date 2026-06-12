@@ -4,7 +4,7 @@ import type { Battler } from './battlers';
 import BattlerSprite from './BattlerSprite';
 import { tx } from './i18n';
 import arenaImg from './assets/arena.jpg';
-import { POWER_UPS, type PowerUpType } from './powerups';
+import { ITEMS, type ItemType } from './items';
 
 // Single source of truth for arena geometry. The floor is the oval the fighters
 // move within, inset from the arena edges to match the background art. These
@@ -33,19 +33,22 @@ const FIGHTER_MAX_W = 60; // sprite is fitted within this box, preserving aspect
 const FIGHTER_MAX_H = 90;
 
 const SPEED = 75; // px / sec
-const ATTACK_RANGE = 58; // centre-to-centre distance to land a hit
+const ATTACK_RANGE = 25; // distance between fighters' bottom-middle (feet) to land a hit
 const ATTACK_COOLDOWN = 500; // ms between a fighter's hits
 const FLASH_MS = 300; // duration of the damage/heal flash
 const FLASH_PEAK = 0.5; // peak opacity of the flash overlay
+const RED_HOLD_MS = 500; // how long the red damage-trail bar holds before fading
+const RED_FADE_MS = 400; // how long the red damage-trail bar takes to fade out
 
-// --- power-ups ---
-const POWERUP_SIZE = 48;
-const POWERUP_SPEED = 55; // px / sec, drifts and bounces
-const POWERUP_PICKUP = 42; // centre distance to collect
-const POWERUP_SIGHT = 420; // how far a fighter notices a power-up
-const POWERUP_MAX = 5; // cap simultaneously on the arena
-const SPAWN_MIN = 3000;
-const SPAWN_MAX = 6000;
+// --- items ---
+const ITEM_SIZE = 48;
+const ITEM_SPEED = 55; // px / sec, drifts and bounces
+const ITEM_PICKUP = 42; // centre distance to collect / trigger
+const ITEM_SIGHT = 420; // how far a fighter notices an item
+const ITEM_MAX = 5; // cap simultaneously on the arena
+const ITEM_CLEARANCE = ITEM_PICKUP + 20; // keep new items this far from any fighter
+const SPAWN_MIN = 2000;
+const SPAWN_MAX = 4000;
 
 const HEAL_AMOUNT = 30; // +30 of 100 max hp
 const EFFECT_MS = 10000; // shield / strength / speed duration
@@ -55,14 +58,22 @@ const STRENGTH_DAMAGE = 1.5; // hits 1.5x harder
 const STRENGTH_SCALE = 1.5; // sprite 1.5x larger
 const SPEED_MULT = 2; // moves 2x faster
 
-interface PowerUp {
+const TRAP_DAMAGE = 20; // damage dealt when a fighter steps on a bear trap
+const TRAP_HOLD_MS = 1000; // how long the sprung trap stays before fading
+const TRAP_FADE_MS = 400; // how long the sprung trap takes to fade out
+
+interface Item {
   id: number;
-  type: PowerUpType;
-  imageUrl: string;
+  type: ItemType;
+  imageUrl: string; // current sprite (the trap swaps to its closed image)
+  closedImageUrl?: string; // bear trap: sprite to show once sprung
+  moves: boolean; // false for the stationary bear trap
   x: number;
   y: number;
   vx: number;
   vy: number;
+  sprungAt: number; // bear trap: timestamp it snapped shut (0 = still open)
+  opacity: number; // display opacity (1; ramps to 0 after a trap springs)
 }
 
 interface Entity extends Battler {
@@ -79,6 +90,9 @@ interface Entity extends Battler {
   flash: number; // current red-overlay opacity (0..FLASH_PEAK)
   healUntil: number; // timestamp the heal flash ends
   heal: number; // current green-overlay opacity (0..FLASH_PEAK)
+  redHp: number; // damage-trail bar: hp % it holds at (the pre-damage value)
+  redUntil: number; // timestamp the red trail holds until, then it fades
+  redOpacity: number; // current red-trail opacity (display)
   shieldUntil: number; // timestamp the shield ends
   shieldOpacity: number; // current shield-circle opacity (display)
   strengthUntil: number; // timestamp the strength buff ends
@@ -127,6 +141,9 @@ export default function Battle(props: {
       flash: 0,
       healUntil: 0,
       heal: 0,
+      redHp: 100,
+      redUntil: 0,
+      redOpacity: 0,
       shieldUntil: 0,
       shieldOpacity: 0,
       strengthUntil: 0,
@@ -147,9 +164,9 @@ export default function Battle(props: {
   for (const b of props.battlers) initialSizes[b.id] = { w: FIGHTER_MAX_W, h: FIGHTER_MAX_H };
   const [sizes, setSizes] = createStore(initialSizes);
 
-  // Power-ups drifting around the arena, waiting to be collected.
-  const [powerups, setPowerups] = createStore<PowerUp[]>([]);
-  let powerupSeq = 0;
+  // Items drifting around the arena (or, for traps, lying in wait).
+  const [items, setItems] = createStore<Item[]>([]);
+  let itemSeq = 0;
   let nextSpawn = now0 + SPAWN_MIN + Math.random() * (SPAWN_MAX - SPAWN_MIN);
 
   // The last fighter standing celebrates in place before the victory screen.
@@ -161,8 +178,8 @@ export default function Battle(props: {
   let finished = false;
   const timers: ReturnType<typeof setTimeout>[] = [];
 
-  // Apply a collected power-up's effect to the fighter.
-  const applyEffect = (e: Entity, type: PowerUpType, now: number) => {
+  // Apply a collected item's effect to the fighter.
+  const applyEffect = (e: Entity, type: ItemType, now: number) => {
     if (type === 'health') {
       e.hp = Math.min(100, e.hp + HEAL_AMOUNT);
       e.healUntil = now + FLASH_MS;
@@ -189,29 +206,65 @@ export default function Battle(props: {
     return { x: CX + Math.cos(a) * RX * r, y: CY + Math.sin(a) * RY * r };
   };
 
+  // A random floor point clear of all living fighters, so items don't spawn on
+  // top of someone (which would instantly collect them / spring a trap). Tries a
+  // handful of times, then falls back to the last point if the arena is crowded.
+  const randomSpawnPoint = () => {
+    let pos = randomFloorPoint();
+    const clear = (p: { x: number; y: number }) =>
+      entities.every((e) => e.ko || Math.hypot(e.x - p.x, e.y - p.y) >= ITEM_CLEARANCE);
+    for (let i = 0; i < 12 && !clear(pos); i++) pos = randomFloorPoint();
+    return pos;
+  };
+
   const tick = (now: number) => {
     const dt = Math.min((now - last) / 1000, 0.05);
     last = now;
 
-    // --- spawn a new power-up every 3-6s (up to the cap) ---
+    // --- spawn a new item every 3-6s (up to the cap) ---
     if (!finished && now >= nextSpawn) {
       nextSpawn = now + SPAWN_MIN + Math.random() * (SPAWN_MAX - SPAWN_MIN);
-      if (powerups.length < POWERUP_MAX) {
-        const def = POWER_UPS[Math.floor(Math.random() * POWER_UPS.length)];
-        const pos = randomFloorPoint();
+      if (items.length < ITEM_MAX) {
+        const def = ITEMS[Math.floor(Math.random() * ITEMS.length)];
+        const pos = randomSpawnPoint();
+        const moves = def.moves !== false;
         const h = randomHeading();
-        const sp = POWERUP_SPEED / SPEED;
-        setPowerups((list) => [
+        const sp = ITEM_SPEED / SPEED;
+        setItems((list) => [
           ...list,
-          { id: powerupSeq++, type: def.type, imageUrl: def.imageUrl, x: pos.x, y: pos.y, vx: h.vx * sp, vy: h.vy * sp },
+          {
+            id: itemSeq++,
+            type: def.type,
+            imageUrl: def.imageUrl,
+            closedImageUrl: def.closedImageUrl,
+            moves,
+            x: pos.x,
+            y: pos.y,
+            vx: moves ? h.vx * sp : 0,
+            vy: moves ? h.vy * sp : 0,
+            sprungAt: 0,
+            opacity: 1,
+          },
         ]);
       }
     }
 
-    // --- drift power-ups, bouncing back at the floor edge ---
-    setPowerups(
-      produce((list: PowerUp[]) => {
+    // --- update items: drift the moving ones, fade out sprung traps ---
+    const expired: number[] = [];
+    setItems(
+      produce((list: Item[]) => {
         for (const p of list) {
+          if (p.sprungAt) {
+            // A sprung trap holds, then fades out and is removed.
+            const since = now - p.sprungAt;
+            if (since >= TRAP_HOLD_MS) {
+              const f = (since - TRAP_HOLD_MS) / TRAP_FADE_MS;
+              p.opacity = f >= 1 ? 0 : 1 - f;
+              if (f >= 1) expired.push(p.id);
+            }
+            continue;
+          }
+          if (!p.moves) continue; // open trap: stays put
           const nx = p.x + p.vx * dt;
           const ny = p.y + p.vy * dt;
           if (insideEllipse(nx, ny)) {
@@ -224,8 +277,10 @@ export default function Battle(props: {
         }
       }),
     );
+    if (expired.length) setItems((list) => list.filter((p) => !expired.includes(p.id)));
 
-    const consumed: number[] = [];
+    const consumed: number[] = []; // collected items to remove
+    const sprung: number[] = []; // bear traps triggered this tick
 
     setEntities(
       produce((list: Entity[]) => {
@@ -236,10 +291,12 @@ export default function Battle(props: {
           if (now >= e.nextRetarget) {
             e.nextRetarget = now + 600 + Math.random() * 1200;
 
-            // Nearest power-up within sight, if any.
-            let pu: PowerUp | null = null;
-            let puD = POWERUP_SIGHT;
-            for (const p of powerups) {
+            // Nearest item within sight, if any (ignore traps — fighters don't
+            // knowingly seek them out; a sprung trap is no longer a target).
+            let pu: Item | null = null;
+            let puD = ITEM_SIGHT;
+            for (const p of items) {
+              if (p.type === 'beartrap') continue;
               const d = Math.hypot(p.x - e.x, p.y - e.y);
               if (d < puD) {
                 puD = d;
@@ -256,7 +313,7 @@ export default function Battle(props: {
             };
 
             if (pu && Math.random() < 0.6) {
-              // Go grab the power-up.
+              // Go grab the item.
               headTo(pu.x, pu.y);
             } else if (Math.random() < 0.6) {
               // Charge the nearest living enemy.
@@ -287,7 +344,7 @@ export default function Battle(props: {
           e.vx += (Math.random() - 0.5) * 20;
           e.vy += (Math.random() - 0.5) * 20;
 
-          // Speed power-up scales the step (so it kicks in/out immediately).
+          // Speed item scales the step (so it kicks in/out immediately).
           const sm = now < e.speedUntil ? SPEED_MULT : 1;
           e.speedActive = sm > 1; // also speeds up the walk-cycle animation
           const nx = e.x + e.vx * dt * sm;
@@ -331,6 +388,11 @@ export default function Battle(props: {
 
             let dmg = 5 + Math.floor(Math.random() * 6); // 5-10
             if (now < e.strengthUntil) dmg = Math.round(dmg * STRENGTH_DAMAGE);
+            // Damage trail: the red bar anchors at the hp *before* this damage
+            // burst and holds there. If it's still showing from a recent hit,
+            // keep its original anchor; only re-anchor once it has faded out.
+            if (now >= o.redUntil + RED_FADE_MS) o.redHp = o.hp;
+            o.redUntil = now + RED_HOLD_MS; // (re)start the hold each hit
             o.hp = Math.max(0, o.hp - dmg);
             o.flashUntil = now + FLASH_MS; // the fighter that got hit flashes
             if (o.hp <= 0) {
@@ -342,11 +404,27 @@ export default function Battle(props: {
           }
         }
 
-        // --- collect power-ups ---
+        // --- collect items / spring traps ---
         for (const e of alive) {
-          for (const p of powerups) {
-            if (consumed.includes(p.id)) continue;
-            if (Math.hypot(p.x - e.x, p.y - e.y) < POWERUP_PICKUP) {
+          for (const p of items) {
+            if (consumed.includes(p.id) || sprung.includes(p.id)) continue;
+            if (p.sprungAt) continue; // an already-sprung trap is inert
+            if (Math.hypot(p.x - e.x, p.y - e.y) >= ITEM_PICKUP) continue;
+            if (p.type === 'beartrap') {
+              // Snaps shut on whoever stands in the middle: 20 damage (unless
+              // shielded). The trap itself is updated in the items store below.
+              sprung.push(p.id);
+              if (now < e.shieldUntil) continue; // shield absorbs the bite
+              if (now >= e.redUntil + RED_FADE_MS) e.redHp = e.hp;
+              e.redUntil = now + RED_HOLD_MS;
+              e.hp = Math.max(0, e.hp - TRAP_DAMAGE);
+              e.flashUntil = now + FLASH_MS;
+              if (e.hp <= 0) {
+                e.ko = true;
+                e.koDir = Math.random() < 0.5 ? 1 : -1;
+                e.koAt = now;
+              }
+            } else {
               applyEffect(e, p.type, now);
               consumed.push(p.id);
             }
@@ -357,6 +435,14 @@ export default function Battle(props: {
         for (const e of list) {
           e.flash = flashRamp(now, e.flashUntil);
           e.heal = flashRamp(now, e.healUntil);
+
+          // Damage trail: hold solid through redUntil, then fade over RED_FADE_MS.
+          if (now < e.redUntil) {
+            e.redOpacity = 1;
+          } else {
+            const f = (now - e.redUntil) / RED_FADE_MS;
+            e.redOpacity = f >= 1 ? 0 : 1 - f;
+          }
 
           if (now < e.shieldUntil) {
             const remaining = e.shieldUntil - now;
@@ -372,7 +458,22 @@ export default function Battle(props: {
       }),
     );
 
-    if (consumed.length) setPowerups((list) => list.filter((p) => !consumed.includes(p.id)));
+    if (consumed.length) setItems((list) => list.filter((p) => !consumed.includes(p.id)));
+
+    // Snap shut any traps triggered this tick: swap to the closed sprite and
+    // start their hold-then-fade timer.
+    if (sprung.length) {
+      setItems(
+        produce((list: Item[]) => {
+          for (const p of list) {
+            if (sprung.includes(p.id) && !p.sprungAt) {
+              p.sprungAt = now;
+              if (p.closedImageUrl) p.imageUrl = p.closedImageUrl;
+            }
+          }
+        }),
+      );
+    }
 
     // --- win check ---
     const living = entities.filter((e) => !e.ko);
@@ -425,20 +526,6 @@ export default function Battle(props: {
 
   return (
     <div class="screen battle">
-      <div class="hp-panel">
-        <For each={entities}>
-          {(e) => (
-            <div class={`hp-row${e.ko ? ' dead' : ''}`}>
-              <div class="hp-chip" style={{ background: e.color }} />
-              <span>{tx(e.name)}</span>
-              <div class="hp-bar">
-                <div class="hp-bar-fill" style={{ width: `${e.hp}%` }} />
-              </div>
-            </div>
-          )}
-        </For>
-      </div>
-
       <div
         class="arena"
         style={{
@@ -467,6 +554,11 @@ export default function Battle(props: {
                 style={{ width: `${(e.ko ? sizes[e.id].h : sizes[e.id].w) * e.scale}px` }}
               />
               <span class="label">{tx(e.name)}</span>
+              {/* Per-fighter health bar; fades out once knocked out. */}
+              <div class="health-bar" style={{ opacity: e.ko ? 0 : 1 }}>
+                <div class="health-bar-damage" style={{ width: `${e.redHp}%`, opacity: e.redOpacity }} />
+                <div class="health-bar-fill" style={{ width: `${e.hp}%` }} />
+              </div>
               <div
                 class={`fighter${e.ko ? ' ko' : ''}${
                   jumping() && e.id === championId() ? ' jumping' : ''
@@ -494,7 +586,7 @@ export default function Battle(props: {
                     class="fighter-body"
                     style={{
                       // Smaller value = shorter duration = faster cycle; the
-                      // speed power-up shortens it by SPEED_MULT to match.
+                      // speed item shortens it by SPEED_MULT to match.
                       '--anim-speed': (e.animSpeed ?? 1) / (e.speedActive ? SPEED_MULT : 1),
                       '--anim-delay': `${-(e.animDelay ?? 0)}s`,
                     }}
@@ -514,14 +606,24 @@ export default function Battle(props: {
           )}
         </For>
 
-        <For each={powerups}>
+        <For each={items}>
           {(p) => (
             <div
-              class="powerup-wrap"
-              style={{ left: `${p.x - POWERUP_SIZE / 2}px`, top: `${p.y - POWERUP_SIZE / 2}px`, 'z-index': Math.round(p.y) }}
+              class="item-wrap"
+              style={{
+                left: `${p.x - ITEM_SIZE / 2}px`,
+                top: `${p.y - ITEM_SIZE / 2}px`,
+                'z-index': Math.round(p.y),
+                opacity: p.opacity,
+              }}
             >
-              <div class="powerup-shadow" />
-              <img class="powerup" src={p.imageUrl} alt={p.type} draggable={false} />
+              <div class="item-shadow" />
+              <img
+                class={`item${p.moves ? '' : ' item-static'}`}
+                src={p.imageUrl}
+                alt={p.type}
+                draggable={false}
+              />
             </div>
           )}
         </For>

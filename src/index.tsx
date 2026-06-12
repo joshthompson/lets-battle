@@ -3,6 +3,10 @@ import { render } from 'solid-js/web';
 import 'solid-devtools';
 
 import App from './App';
+import { preloadImages } from './preload';
+
+// Kick off image loading as early as possible, before the first render.
+preloadImages();
 
 const root = document.getElementById('root');
 

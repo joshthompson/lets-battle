@@ -6,18 +6,19 @@ import Intro from './Intro';
 import Battle from './Battle';
 import Victory from './Victory';
 import Draw from './Draw';
+import Credits from './Credits';
 import './styles.css';
 
-type Phase = 'menu' | 'intro' | 'battle' | 'victory' | 'draw';
+type Phase = 'menu' | 'intro' | 'battle' | 'victory' | 'draw' | 'credits';
 
 // Dev toggle: jump straight from the menu into the battle, skipping the intro.
 const SKIP_INTRO = false;
 
-// The app is laid out at a fixed base size (the 1200x800 arena plus the HP panel
-// and some padding) and scaled down to fit smaller windows. It never scales up
-// past 1, so large windows show it at native size, centred.
+// The app is laid out at a fixed base size (the 1200x800 arena) and scaled to
+// fit the window — shrinking on small windows and enlarging on big ones — so it
+// always fills as much of the viewport as its aspect ratio allows.
 const BASE_W = 1200;
-const BASE_H = 900;
+const BASE_H = 800;
 
 const App: Component = () => {
   const [phase, setPhase] = createSignal<Phase>('menu');
@@ -26,8 +27,8 @@ const App: Component = () => {
   const [drawn, setDrawn] = createSignal<Battler[]>([]);
 
   const start = () => {
-    // Fresh randomised roster each match.
-    setRoster(generateBattlers(8));
+    // Every fighter battles each match.
+    setRoster(generateBattlers());
     setPhase(SKIP_INTRO ? 'battle' : 'intro');
   };
 
@@ -36,9 +37,9 @@ const App: Component = () => {
     document.title = t('title');
   });
 
-  // Shrink the whole stage to fit the window, but never enlarge past native size.
+  // Scale the whole stage to fit the window (both shrinking and enlarging).
   const [scale, setScale] = createSignal(1);
-  const fit = () => setScale(Math.min(1, window.innerWidth / BASE_W, window.innerHeight / BASE_H));
+  const fit = () => setScale(Math.min(window.innerWidth / BASE_W, window.innerHeight / BASE_H));
   onMount(() => {
     fit();
     window.addEventListener('resize', fit);
@@ -49,7 +50,10 @@ const App: Component = () => {
     <div class="app-stage" style={{ width: `${BASE_W}px`, height: `${BASE_H}px`, transform: `scale(${scale()})` }}>
     <Switch>
       <Match when={phase() === 'menu'}>
-        <Menu onStart={start} />
+        <Menu onStart={start} onCredits={() => setPhase('credits')} />
+      </Match>
+      <Match when={phase() === 'credits'}>
+        <Credits onDone={() => setPhase('menu')} />
       </Match>
       <Match when={phase() === 'intro'}>
         <Intro battlers={roster()} onDone={() => setPhase('battle')} />

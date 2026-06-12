@@ -43,6 +43,12 @@ const STRINGS = {
   draw: { en: 'Draw', ru: 'Ничья' },
   by: { en: 'by', ru: 'Автор:' },
   fighter: { en: 'Fighter', ru: 'Боец' },
+  skipIntro: { en: 'Skip Intro', ru: 'Пропустить' },
+  credits: { en: 'Credits', ru: 'Авторы' },
+  developedBy: { en: 'Developed by Josh Thompson', ru: 'Разработка: Джош Томпсон' },
+  gameArtBy: { en: 'Game Art by Olesia Vasileva and Josh Thompson', ru: 'Игровая графика: Олесия Васильева и Джош Томпсон' },
+  characterArtBy: { en: 'Character Art by:', ru: 'Художники персонажей:' },
+  and: { en: 'and', ru: 'и' },
   title: { en: "Let's Battle", ru: 'В бой!' },
 } as const;
 

@@ -3,6 +3,7 @@ import type { Battler } from './battlers';
 import Streaks from './Streaks';
 import BattlerSprite from './BattlerSprite';
 import { t, tx } from './i18n';
+import { backgroundGradient } from './colors';
 
 const PER_BATTLER_MS = 1400;
 
@@ -31,10 +32,15 @@ export default function Intro(props: { battlers: Battler[]; onDone: () => void }
 
   onCleanup(() => clearInterval(timer));
 
+  const skip = () => {
+    clearInterval(timer);
+    props.onDone();
+  };
+
   const current = () => props.battlers[index()];
 
   return (
-    <div class="screen intro" style={{ background: current().color }}>
+    <div class="screen intro" style={{ background: backgroundGradient(current().color) }}>
       {/* keyed wrapper so the streaks + enter animation restart on each fighter */}
       <Show when={current()} keyed>
         {(b) => (
@@ -60,6 +66,9 @@ export default function Intro(props: { battlers: Battler[]; onDone: () => void }
           </>
         )}
       </Show>
+      <button class="skip-intro-btn" onClick={skip} type="button">
+        {t('skipIntro')}
+      </button>
     </div>
   );
 }

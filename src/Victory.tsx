@@ -1,18 +1,13 @@
-import { onCleanup, Show } from 'solid-js';
+import { Show } from 'solid-js';
 import type { Battler } from './battlers';
 import Streaks from './Streaks';
 import BattlerSprite from './BattlerSprite';
 import { t, tx } from './i18n';
-
-// Auto-return to the menu after a celebratory pause.
-const RETURN_MS = 6000;
+import { backgroundGradient } from './colors';
 
 export default function Victory(props: { winner: Battler; onDone: () => void }) {
-  const timer = setTimeout(props.onDone, RETURN_MS);
-  onCleanup(() => clearTimeout(timer));
-
   return (
-    <div class="screen victory" style={{ background: props.winner.color }}>
+    <div class="screen victory" style={{ background: backgroundGradient(props.winner.color) }}>
       <Streaks count={60} />
       <div class="victory-banner">{t('winner')}</div>
       <BattlerSprite battler={props.winner} width={280} height={420} class="victory-fighter" />
