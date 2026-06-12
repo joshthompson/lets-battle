@@ -411,10 +411,9 @@ export default function Battle(props: {
             if (p.sprungAt) continue; // an already-sprung trap is inert
             if (Math.hypot(p.x - e.x, p.y - e.y) >= ITEM_PICKUP) continue;
             if (p.type === 'beartrap') {
-              // Snaps shut on whoever stands in the middle: 20 damage (unless
-              // shielded). The trap itself is updated in the items store below.
+              // Snaps shut on whoever stands in the middle: 20 damage, which a
+              // shield does NOT block. The trap is updated in the items store below.
               sprung.push(p.id);
-              if (now < e.shieldUntil) continue; // shield absorbs the bite
               if (now >= e.redUntil + RED_FADE_MS) e.redHp = e.hp;
               e.redUntil = now + RED_HOLD_MS;
               e.hp = Math.max(0, e.hp - TRAP_DAMAGE);

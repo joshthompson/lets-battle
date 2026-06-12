@@ -10,6 +10,8 @@ import spikerImg from './assets/battlers/spiker.png';
 import fishEyesImg from './assets/battlers/fish-eyes.png';
 import chickenPantsImg from './assets/battlers/chicken-pants.png';
 import fergusImg from './assets/battlers/fergus.png';
+import coolGooseImg from './assets/battlers/cool-goose.png';
+import annaImg from './assets/battlers/anna.png';
 import { LocaleText } from './i18n';
 
 type MovementType = 'wobble' | 'jump' | 'glide';
@@ -31,24 +33,24 @@ export interface Battler {
 // The full roster. generateBattlers returns all of these, or a random subset
 // when a cap is given.
 const PRESET_BATTLERS: Omit<Battler, 'id'>[] = [
-  {
-    name: { en: 'Psyduck', ru: 'Псайдак' },
-    color: '#FFD700',
-    imageUrl: psyduckImg,
-    movementType: 'wobble',
-  },
-  {
-    name: { en: 'Ant Head', ru: 'Челомура' },
-    color: '#4d8bff',
-    imageUrl: antHeadImg,
-    movementType: 'glide',
-  },
-  {
-    name: { en: 'Bolt', ru: 'Болт' },
-    color: '#ff5a3c',
-    imageUrl: boltImage,
-    movementType: 'jump',
-  },
+  // {
+  //   name: { en: 'Psyduck', ru: 'Псайдак' },
+  //   color: '#FFD700',
+  //   imageUrl: psyduckImg,
+  //   movementType: 'wobble',
+  // },
+  // {
+  //   name: { en: 'Ant Head', ru: 'Челомура' },
+  //   color: '#4d8bff',
+  //   imageUrl: antHeadImg,
+  //   movementType: 'glide',
+  // },
+  // {
+  //   name: { en: 'Bolt', ru: 'Болт' },
+  //   color: '#ff5a3c',
+  //   imageUrl: boltImage,
+  //   movementType: 'jump',
+  // },
   {
     name: { en: 'Monkatt', ru: 'Обезкот' },
     artist: { en: 'Alisa', ru: 'Алиса' },
@@ -63,12 +65,12 @@ const PRESET_BATTLERS: Omit<Battler, 'id'>[] = [
     imageUrl: cabbageImg,
     movementType: 'jump',
   },
-  {
-    name: { en: 'Mr Hoppy', ru: 'Мистер Хоппи' },
-    color: '#8B4513',
-    imageUrl: mrHoppyImg,
-    movementType: 'jump',
-  },
+  // {
+  //   name: { en: 'Mr Hoppy', ru: 'Мистер Хоппи' },
+  //   color: '#8B4513',
+  //   imageUrl: mrHoppyImg,
+  //   movementType: 'jump',
+  // },
   {
     name: { en: 'Chupapi', ru: 'Чупапи' },
     artist: { en: 'Olesia', ru: 'Олеся' },
@@ -95,6 +97,20 @@ const PRESET_BATTLERS: Omit<Battler, 'id'>[] = [
     artist: { en: 'Irina', ru: 'Ирина' },
     color: '#FF69B4',
     imageUrl: fergusImg,
+    movementType: 'jump',
+  },
+  {
+    name: { en: 'Cool Goose', ru: 'Крутой Гусь' },
+    artist: { en: 'Josh', ru: 'Джош' },
+    color: '#1E90FF',
+    imageUrl: coolGooseImg,
+    movementType: 'wobble',
+  },
+  {
+    name: { en: 'Anna', ru: 'Анна' },
+    artist: { en: 'Anna', ru: 'Анна' },
+    color: '#FF69B4',
+    imageUrl: annaImg,
     movementType: 'jump',
   },
 ];
