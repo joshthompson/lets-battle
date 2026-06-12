@@ -1,10 +1,19 @@
 import { createStore, produce } from 'solid-js/store';
-import { createSignal, For, onCleanup, onMount } from 'solid-js';
+import { createSignal, For, onCleanup, onMount, Show } from 'solid-js';
 import type { Battler } from './battlers';
 import BattlerSprite from './BattlerSprite';
-import { tx } from './i18n';
+import { t, tx } from './i18n';
 import arenaImg from './assets/arena.jpg';
-import { ITEMS, type ItemType } from './items';
+import launcherBaseImg from './assets/misc/launcher-base.png';
+import launcherTubeImg from './assets/misc/launcher-tube.png';
+import explode1Img from './assets/misc/explode1.png';
+import explode2Img from './assets/misc/explode2.png';
+import explode3Img from './assets/misc/explode3.png';
+import explode4Img from './assets/misc/explode4.png';
+import { getItem, SPAWN_ITEMS, LAUNCHER_ITEMS, type ItemType } from './items';
+
+// Explosion animation frames, shown in turn once a bomb lands.
+const EXPLODE_FRAMES = [explode1Img, explode2Img, explode3Img, explode4Img];
 
 // Single source of truth for arena geometry. The floor is the oval the fighters
 // move within, inset from the arena edges to match the background art. These
@@ -62,6 +71,31 @@ const TRAP_DAMAGE = 20; // damage dealt when a fighter steps on a bear trap
 const TRAP_HOLD_MS = 1000; // how long the sprung trap stays before fading
 const TRAP_FADE_MS = 400; // how long the sprung trap takes to fade out
 
+// --- bomb (launcher-only): detonates where it lands ---
+const BOMB_DAMAGE = 20; // peak damage at the blast centre
+const BOMB_INNER = 50; // within this radius a fighter takes full damage
+const BOMB_OUTER = 120; // beyond this radius a fighter takes none (linear falloff between)
+const EXPLODE_SIZE = 200; // px box the explosion art is drawn into
+const EXPLODE_FRAME_MS = 60; // how long each explosion frame shows
+
+// --- item launcher (player-controlled) ---
+const LAUNCHER_X = CX; // launcher sits bottom-centre
+const LAUNCHER_PIVOT_Y = 760; // the barrel's hinge, down in the floor lip
+const MUZZLE_DIST = 80; // distance from the pivot to the tube's open end (matches the art)
+const AIM_MIN = -65; // barrel sweep limits, degrees (0 = straight up)
+const AIM_MAX = 65;
+const AIM_SPEED = 75; // degrees / sec while aiming
+const POWER_SPEED = 1.7; // power-meter oscillation (full 0→1→0 sweeps / sec)
+const LAUNCH_SPEED_MIN = 25; // px / sec at zero power — barely leaves the muzzle
+const LAUNCH_SPEED_MAX = 700; // px / sec at full power
+const LAUNCH_DRAG = 1.6; // per-second exponential speed decay while a projectile flies
+// Items are lobbed: they arc up off the floor and fall back down. The shadow
+// stays on the ground while the sprite rises by `lift`.
+const LAUNCH_GRAVITY = 900; // px/sec^2 pulling a flying item back to the floor
+const LAUNCH_LIFT_MIN = 160; // upward launch velocity at zero power (px/sec) — a small hop
+const LAUNCH_LIFT_MAX = 540; // upward launch velocity at full power (px/sec) — a high arc
+const RELOAD_MS = 3500; // delay before a new item loads into the launcher
+
 interface Item {
   id: number;
   type: ItemType;
@@ -74,6 +108,18 @@ interface Item {
   vy: number;
   sprungAt: number; // bear trap: timestamp it snapped shut (0 = still open)
   opacity: number; // display opacity (1; ramps to 0 after a trap springs)
+  flying: boolean; // launched projectile still in the air (arcing toward the floor)
+  lift: number; // height above the floor (px); the sprite renders this far above its shadow
+  vlift: number; // vertical velocity of the arc (px/sec; gravity pulls it back down)
+}
+
+// A bomb blast playing out where a launched bomb came to rest.
+interface Explosion {
+  id: number;
+  x: number;
+  y: number;
+  startedAt: number; // timestamp the blast began
+  frame: number; // index into EXPLODE_FRAMES, advanced each tick from elapsed time
 }
 
 interface Entity extends Battler {
@@ -166,8 +212,61 @@ export default function Battle(props: {
 
   // Items drifting around the arena (or, for traps, lying in wait).
   const [items, setItems] = createStore<Item[]>([]);
+  const [explosions, setExplosions] = createStore<Explosion[]>([]);
+  let explosionSeq = 0;
   let itemSeq = 0;
   let nextSpawn = now0 + SPAWN_MIN + Math.random() * (SPAWN_MAX - SPAWN_MIN);
+
+  // Player-controlled launcher. 'aiming' sweeps the barrel; one press locks the
+  // angle and starts the power meter ('powering'); a second press fires and the
+  // launcher reloads ('reloading') before loading a fresh item.
+  const [launcher, setLauncher] = createStore({
+    phase: 'aiming' as 'aiming' | 'powering' | 'reloading',
+    itemIndex: Math.floor(Math.random() * LAUNCHER_ITEMS.length),
+    angle: AIM_MIN, // barrel rotation, degrees (0 = straight up)
+    angleDir: 1,
+    power: 0, // 0..1
+    powerDir: 1,
+    reloadUntil: 0,
+    reloadProgress: 0, // 0..1, drives the progress bar in the button while reloading
+  });
+
+  const fireLauncher = () => {
+    if (finished) return;
+    if (launcher.phase === 'aiming') {
+      // Lock the aim and start charging power.
+      setLauncher({ phase: 'powering', power: 0, powerDir: 1 });
+    } else if (launcher.phase === 'powering') {
+      // Lock the power and fire the loaded item out of the tube's end, travelling
+      // in exactly the direction the tube points.
+      const def = getItem(LAUNCHER_ITEMS[launcher.itemIndex]);
+      const rad = (launcher.angle * Math.PI) / 180;
+      const dirX = Math.sin(rad);
+      const dirY = -Math.cos(rad);
+      const speed = LAUNCH_SPEED_MIN + (LAUNCH_SPEED_MAX - LAUNCH_SPEED_MIN) * launcher.power;
+      const moves = def.moves !== false;
+      setItems((list) => [
+        ...list,
+        {
+          id: itemSeq++,
+          type: def.type,
+          imageUrl: def.imageUrl,
+          closedImageUrl: def.closedImageUrl,
+          moves,
+          x: LAUNCHER_X + dirX * MUZZLE_DIST,
+          y: LAUNCHER_PIVOT_Y + dirY * MUZZLE_DIST,
+          vx: dirX * speed,
+          vy: dirY * speed,
+          sprungAt: 0,
+          opacity: 1,
+          flying: true,
+          lift: 0,
+          vlift: LAUNCH_LIFT_MIN + (LAUNCH_LIFT_MAX - LAUNCH_LIFT_MIN) * launcher.power,
+        },
+      ]);
+      setLauncher({ phase: 'reloading', reloadUntil: performance.now() + RELOAD_MS, reloadProgress: 0 });
+    }
+  };
 
   // The last fighter standing celebrates in place before the victory screen.
   const [championId, setChampionId] = createSignal<number | null>(null);
@@ -221,11 +320,47 @@ export default function Battle(props: {
     const dt = Math.min((now - last) / 1000, 0.05);
     last = now;
 
+    // --- launcher: sweep the aim, oscillate the power, reload after firing ---
+    if (!finished) {
+      setLauncher(
+        produce((l) => {
+          if (l.phase === 'aiming') {
+            l.angle += AIM_SPEED * dt * l.angleDir;
+            if (l.angle >= AIM_MAX) {
+              l.angle = AIM_MAX;
+              l.angleDir = -1;
+            } else if (l.angle <= AIM_MIN) {
+              l.angle = AIM_MIN;
+              l.angleDir = 1;
+            }
+          } else if (l.phase === 'powering') {
+            l.power += POWER_SPEED * dt * l.powerDir;
+            if (l.power >= 1) {
+              l.power = 1;
+              l.powerDir = -1;
+            } else if (l.power <= 0) {
+              l.power = 0;
+              l.powerDir = 1;
+            }
+          } else if (l.phase === 'reloading') {
+            l.reloadProgress = Math.min(1, 1 - (l.reloadUntil - now) / RELOAD_MS);
+            if (now >= l.reloadUntil) {
+              // Resume sweeping from the angle the barrel was left at (it was
+              // locked when the last shot fired), so the aim doesn't jump.
+              l.phase = 'aiming';
+              l.itemIndex = Math.floor(Math.random() * LAUNCHER_ITEMS.length);
+              l.reloadProgress = 0;
+            }
+          }
+        }),
+      );
+    }
+
     // --- spawn a new item every 3-6s (up to the cap) ---
     if (!finished && now >= nextSpawn) {
       nextSpawn = now + SPAWN_MIN + Math.random() * (SPAWN_MAX - SPAWN_MIN);
       if (items.length < ITEM_MAX) {
-        const def = ITEMS[Math.floor(Math.random() * ITEMS.length)];
+        const def = getItem(SPAWN_ITEMS[Math.floor(Math.random() * SPAWN_ITEMS.length)]);
         const pos = randomSpawnPoint();
         const moves = def.moves !== false;
         const h = randomHeading();
@@ -244,6 +379,9 @@ export default function Battle(props: {
             vy: moves ? h.vy * sp : 0,
             sprungAt: 0,
             opacity: 1,
+            flying: false,
+            lift: 0,
+            vlift: 0,
           },
         ]);
       }
@@ -251,9 +389,45 @@ export default function Battle(props: {
 
     // --- update items: drift the moving ones, fade out sprung traps ---
     const expired: number[] = [];
+    const detonations: { x: number; y: number }[] = []; // bombs that landed this tick
     setItems(
       produce((list: Item[]) => {
         for (const p of list) {
+          if (p.flying) {
+            // Launched projectile: arc up off the floor and fall back down while
+            // drifting forward, bouncing off the floor edge. It lands when its
+            // lift returns to the ground.
+            p.vlift -= LAUNCH_GRAVITY * dt;
+            p.lift += p.vlift * dt;
+            const k = Math.exp(-LAUNCH_DRAG * dt);
+            p.vx *= k;
+            p.vy *= k;
+            const nx = p.x + p.vx * dt;
+            const ny = p.y + p.vy * dt;
+            if (!insideEllipse(p.x, p.y) || insideEllipse(nx, ny)) {
+              p.x = nx;
+              p.y = ny;
+            } else {
+              p.vx = -p.vx;
+              p.vy = -p.vy;
+            }
+            if (p.lift <= 0) {
+              p.lift = 0;
+              if (p.type === 'bomb') {
+                // A bomb detonates the instant it lands rather than settling into
+                // a collectible item: record the blast and remove the bomb.
+                detonations.push({ x: p.x, y: p.y });
+                expired.push(p.id);
+              } else {
+                // Come to rest where it lands.
+                p.flying = false;
+                p.vx = 0;
+                p.vy = 0;
+                p.vlift = 0;
+              }
+            }
+            continue;
+          }
           if (p.sprungAt) {
             // A sprung trap holds, then fades out and is removed.
             const since = now - p.sprungAt;
@@ -279,6 +453,27 @@ export default function Battle(props: {
     );
     if (expired.length) setItems((list) => list.filter((p) => !expired.includes(p.id)));
 
+    // Play an explosion at each bomb that just landed.
+    if (detonations.length) {
+      setExplosions((list) => [
+        ...list,
+        ...detonations.map((d) => ({ id: explosionSeq++, x: d.x, y: d.y, startedAt: now, frame: 0 })),
+      ]);
+    }
+
+    // Advance each explosion's frame from elapsed time and drop finished ones.
+    const explodeLife = EXPLODE_FRAMES.length * EXPLODE_FRAME_MS;
+    if (explosions.length) {
+      setExplosions(produce((list: Explosion[]) => {
+        for (const x of list) {
+          x.frame = Math.min(EXPLODE_FRAMES.length - 1, Math.floor((now - x.startedAt) / EXPLODE_FRAME_MS));
+        }
+      }));
+      if (explosions.some((x) => now - x.startedAt >= explodeLife)) {
+        setExplosions((list) => list.filter((x) => now - x.startedAt < explodeLife));
+      }
+    }
+
     const consumed: number[] = []; // collected items to remove
     const sprung: number[] = []; // bear traps triggered this tick
 
@@ -296,7 +491,7 @@ export default function Battle(props: {
             let pu: Item | null = null;
             let puD = ITEM_SIGHT;
             for (const p of items) {
-              if (p.type === 'beartrap') continue;
+              if (p.type === 'beartrap' || p.flying) continue;
               const d = Math.hypot(p.x - e.x, p.y - e.y);
               if (d < puD) {
                 puD = d;
@@ -404,10 +599,34 @@ export default function Battle(props: {
           }
         }
 
+        // --- bomb blasts: full damage at the centre, falling off to zero by
+        // BOMB_OUTER. Like a trap, a shield does not absorb it. ---
+        for (const d of detonations) {
+          for (const e of alive) {
+            if (e.ko) continue;
+            const dist = Math.hypot(e.x - d.x, e.y - d.y);
+            if (dist >= BOMB_OUTER) continue;
+            const falloff =
+              dist <= BOMB_INNER ? 1 : (BOMB_OUTER - dist) / (BOMB_OUTER - BOMB_INNER);
+            const dmg = Math.round(BOMB_DAMAGE * falloff);
+            if (dmg <= 0) continue;
+            if (now >= e.redUntil + RED_FADE_MS) e.redHp = e.hp;
+            e.redUntil = now + RED_HOLD_MS;
+            e.hp = Math.max(0, e.hp - dmg);
+            e.flashUntil = now + FLASH_MS;
+            if (e.hp <= 0) {
+              e.ko = true;
+              e.koDir = Math.random() < 0.5 ? 1 : -1;
+              e.koAt = now;
+            }
+          }
+        }
+
         // --- collect items / spring traps ---
         for (const e of alive) {
           for (const p of items) {
             if (consumed.includes(p.id) || sprung.includes(p.id)) continue;
+            if (p.flying) continue; // a mid-flight projectile can't be picked up yet
             if (p.sprungAt) continue; // an already-sprung trap is inert
             if (Math.hypot(p.x - e.x, p.y - e.y) >= ITEM_PICKUP) continue;
             if (p.type === 'beartrap') {
@@ -617,15 +836,85 @@ export default function Battle(props: {
               }}
             >
               <div class="item-shadow" />
-              <img
-                class={`item${p.moves ? '' : ' item-static'}`}
-                src={p.imageUrl}
-                alt={p.type}
-                draggable={false}
-              />
+              {/* The shadow stays on the floor; the sprite rises by its lift. */}
+              <div class="item-rise" style={{ transform: `translateY(${-p.lift}px)` }}>
+                <img
+                  class={`item${p.moves ? '' : ' item-static'}`}
+                  src={p.imageUrl}
+                  alt={p.type}
+                  draggable={false}
+                />
+              </div>
             </div>
           )}
         </For>
+
+        <For each={explosions}>
+          {(x) => (
+            <img
+              class="explosion"
+              src={EXPLODE_FRAMES[x.frame]}
+              style={{
+                left: `${x.x - EXPLODE_SIZE / 2}px`,
+                top: `${x.y - EXPLODE_SIZE / 2}px`,
+                width: `${EXPLODE_SIZE}px`,
+                height: `${EXPLODE_SIZE}px`,
+                'z-index': Math.round(x.y) + 1000,
+              }}
+              alt=""
+              draggable={false}
+            />
+          )}
+        </For>
+
+        {/* Player-controlled item launcher at the bottom-centre of the arena.
+            The tube rotates to aim (behind the base); the loaded item sits in the
+            base's ring; the button is to the right. */}
+        <div class="launcher">
+          <img
+            class="launcher-tube"
+            src={launcherTubeImg}
+            style={{ left: `${LAUNCHER_X}px`, top: `${LAUNCHER_PIVOT_Y}px`, transform: `rotate(${launcher.angle}deg)` }}
+            alt=""
+            draggable={false}
+          />
+          <img
+            class="launcher-base"
+            src={launcherBaseImg}
+            style={{ left: `${LAUNCHER_X}px`, top: `${LAUNCHER_PIVOT_Y}px` }}
+            alt=""
+            draggable={false}
+          />
+          <Show when={launcher.phase !== 'reloading'}>
+            <img
+              class="launcher-item"
+              src={getItem(LAUNCHER_ITEMS[launcher.itemIndex]).imageUrl}
+              style={{ left: `${LAUNCHER_X}px`, top: `${LAUNCHER_PIVOT_Y}px` }}
+              alt=""
+              draggable={false}
+            />
+          </Show>
+          <div class="launcher-controls" style={{ left: `${LAUNCHER_X + 62}px`, top: `${LAUNCHER_PIVOT_Y}px` }}>
+            <Show when={launcher.phase === 'powering'}>
+              <div class="launcher-power">
+                <div class="launcher-power-fill" style={{ height: `${launcher.power * 100}%` }} />
+              </div>
+            </Show>
+            <button
+              class="launcher-btn"
+              onClick={fireLauncher}
+              disabled={launcher.phase === 'reloading'}
+              type="button"
+            >
+              <Show when={launcher.phase === 'reloading'}>
+                <span class="launcher-btn-progress" style={{ width: `${launcher.reloadProgress * 100}%` }} />
+              </Show>
+              <span class="launcher-btn-label">
+                {launcher.phase === 'aiming' ? t('aim') : launcher.phase === 'powering' ? t('fire') : t('reloading')}
+              </span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

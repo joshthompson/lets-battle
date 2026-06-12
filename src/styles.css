@@ -183,6 +183,7 @@ body {
 
 .credits-heading {
   margin-top: 22px;
+  margin-bottom: 0px;
   opacity: 0.8;
 }
 
@@ -815,19 +816,38 @@ body {
   background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0) 70%);
 }
 
+/* Carries a launched item's altitude (translateY) so the sprite floats above
+   its grounded shadow. The bob/glow animation on the img inside composes with it. */
+.item-rise {
+  position: absolute;
+  inset: 0;
+}
+
 .item {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: contain;
-  /* bob up and down off the floor */
+  /* bob up and down off the floor, with a subtle brightness pulse */
   transform-origin: 50% 100%;
-  animation: item-bob 1s ease-in-out infinite;
+  animation:
+    item-bob 1s ease-in-out infinite,
+    item-glow 1s ease-in-out infinite;
 
-  /* The bear trap lies flat on the ground — no bobbing. */
+  /* The bear trap lies flat on the ground — no bobbing or glow. */
   &.item-static {
     animation: none;
+  }
+}
+
+@keyframes item-glow {
+  0%,
+  100% {
+    filter: brightness(1.25);
+  }
+  50% {
+    filter: brightness(1.5);
   }
 }
 
@@ -839,6 +859,139 @@ body {
   50% {
     transform: translateY(-10px);
   }
+}
+
+/* Bomb blast — a short frame-by-frame burst centred where the bomb landed. */
+.explosion {
+  position: absolute;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+/* ---------- Item launcher ---------- */
+
+/* Full-arena overlay so children can be placed in arena coordinates; only the
+   button captures pointer events. */
+.launcher {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 900;
+}
+
+/* The tube rotates to aim. It pivots near the centre of the base ring (set via
+   transform-origin) and extends mostly upward from there. */
+.launcher-tube {
+  position: absolute;
+  width: 40px;
+  height: 70px;
+  margin-left: -20px;
+  /* Pivot stays on the base centre (transform-origin), but the tube body is
+     pushed ~10px outward so more of it shows beyond the base ring. */
+  margin-top: -80px;
+  transform-origin: 50% calc(100% + 10px);
+  object-fit: contain;
+  pointer-events: none;
+}
+
+/* Stationary base ring, centred on the pivot point. */
+.launcher-base {
+  position: absolute;
+  width: 82px;
+  height: 80px;
+  margin-left: -41px;
+  margin-top: -40px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+/* The loaded item rests in the base's ring (centred on the pivot, stationary). */
+.launcher-item {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  margin-left: -17px;
+  margin-top: -17px;
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5));
+}
+
+/* Aim/fire button (and power meter) sit to the right of the launcher, vertically
+   centred on the pivot (position set inline). */
+.launcher-controls {
+  position: absolute;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  pointer-events: auto;
+}
+
+.launcher-btn {
+  position: relative;
+  overflow: hidden;
+  padding: 8px 22px;
+  font-size: 16px;
+  font-weight: 800;
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #fff;
+  background: linear-gradient(135deg, #ff4d4d, #b30000);
+  border: 2px solid #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #800000;
+  transition: transform 0.08s ease;
+
+  &:active {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 #800000;
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.6;
+    background: linear-gradient(135deg, #666, #333);
+    box-shadow: 0 4px 0 #222;
+  }
+}
+
+/* Reload progress fill that grows left-to-right behind the label. */
+.launcher-btn-progress {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.launcher-btn-label {
+  position: relative;
+  z-index: 1;
+}
+
+/* Vertical power meter, shown just left of the button (between it and the
+   launcher) while charging. */
+.launcher-power {
+  position: absolute;
+  right: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 64px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.launcher-power-fill {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  background: linear-gradient(to top, #4dff88, #ffd24d, #ff4d4d);
 }
 
 /* ---------- Victory ---------- */

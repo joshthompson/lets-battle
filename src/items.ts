@@ -7,8 +7,9 @@ import strengthImg from './assets/items/strength.png';
 import speedImg from './assets/items/speed.png';
 import bearTrapOpenImg from './assets/items/bear-trap-open.png';
 import bearTrapClosedImg from './assets/items/bear-trap-closed.png';
+import bombImg from './assets/items/bomb.png';
 
-export type ItemType = 'health' | 'shield' | 'strength' | 'speed' | 'beartrap';
+export type ItemType = 'health' | 'shield' | 'strength' | 'speed' | 'beartrap' | 'bomb';
 
 export interface ItemDef {
   type: ItemType;
@@ -25,4 +26,22 @@ export const ITEMS: ItemDef[] = [
   { type: 'strength', imageUrl: strengthImg },
   { type: 'speed', imageUrl: speedImg },
   { type: 'beartrap', imageUrl: bearTrapOpenImg, closedImageUrl: bearTrapClosedImg, moves: false },
+  { type: 'bomb', imageUrl: bombImg },
+];
+
+// Look up a definition by type.
+const ITEM_BY_TYPE = new Map(ITEMS.map((i) => [i.type, i] as const));
+export const getItem = (type: ItemType): ItemDef => ITEM_BY_TYPE.get(type)!;
+
+// Which items appear where. SPAWN_ITEMS drift loose on the floor for fighters to
+// pick up; LAUNCHER_ITEMS load into the player's launcher. An item can be in
+// both, one, or neither.
+export const SPAWN_ITEMS: ItemType[] = ['health', 'shield', 'strength', 'speed', 'beartrap'];
+export const LAUNCHER_ITEMS: ItemType[] = [
+  'health',
+  'shield',
+  'strength',
+  'speed',
+  'beartrap',
+  'bomb',
 ];

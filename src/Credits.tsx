@@ -13,7 +13,7 @@ export default function Credits(props: { onDone: () => void }) {
         <p>{t('gameArtBy')} </p>
         <p class="credits-heading">{t('characterArtBy')}</p>
         <ul class="credits-artists">
-          <For each={uniqueArtists()}>{(artist) => <li>{tx(artist)}</li>}</For>
+          {uniqueArtists().map(tx).join(', ')}
         </ul>
       </div>
       <button class="start-btn" onClick={props.onDone}>
