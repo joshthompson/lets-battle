@@ -18,7 +18,7 @@ const HEAL_COLOR = '#2ee65a';
 export default function BattlerSprite(props: {
   battler: Battler;
   width?: number;
-  height?: number;
+  height?: number | 'auto';
   class?: string;
   style?: JSX.CSSProperties;
   flash?: number;
@@ -33,7 +33,7 @@ export default function BattlerSprite(props: {
       }`}
       style={{
         width: props.width != null ? `${props.width}px` : '100%',
-        height: props.height != null ? `${props.height}px` : '100%',
+        height: props.height === 'auto' ? 'auto' : props.height != null ? `${props.height}px` : '100%',
         // Coloured background only when there's no artwork.
         ...(hasImage() ? {} : { background: props.battler.color }),
         ...props.style,

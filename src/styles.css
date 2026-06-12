@@ -80,6 +80,48 @@ body {
 
 /* ---------- Menu ---------- */
 
+/* Decorative battlers in the gutters either side of the menu. Desaturated and
+   pulsing: fade in to 0.5 over 2s, fade out over 2s, pause 1s, then loop. The
+   right one is mirrored and offset by half the cycle so the two alternate. */
+.menu-decor {
+  --animation-duration: 7s;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  filter: saturate(0);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 0;
+  animation: menu-decor-pulse var(--animation-duration) ease-in-out infinite;
+}
+
+.menu-decor-left {
+  left: 5%;
+}
+
+.menu-decor-right {
+  right: 5%;
+  transform: translateY(-50%) scaleX(-1);
+  /* Positive (not negative) delay so it stays hidden at its base opacity:0
+     until its turn, rather than starting mid-fade at first frame. */
+  animation-delay: calc(var(--animation-duration) / 2);
+}
+
+@keyframes menu-decor-pulse {
+  0% {
+    opacity: 0;
+  }
+  40% {
+    opacity: 0.3;
+  }
+  80% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 .menu-logo {
   font-size: 84px;
   font-weight: 900;
@@ -138,7 +180,9 @@ body {
   }
 }
 
-.menu-credits-btn {
+.menu-credits-btn,
+.menu-gallery-btn,
+.menu-howitworks-btn {
   margin-top: 22px;
   padding: 8px 22px;
   font-size: 16px;
@@ -182,21 +226,112 @@ body {
 }
 
 .credits-heading {
-  margin-top: 22px;
+  margin-top: 20px;
   margin-bottom: 0px;
-  opacity: 0.8;
+  opacity: 0.4;
 }
 
 .credits-artists {
   list-style: none;
   padding: 0;
-  margin: 8px 0 0;
+  margin: 0;
   font-size: 24px;
   font-weight: 700;
 
   & li {
     margin: 2px 0;
   }
+}
+
+/* ---------- How It Works ---------- */
+
+.how-it-works-body {
+  max-width: 760px;
+  text-align: center;
+
+  & p {
+    margin: 0 0 18px;
+  }
+}
+
+/* ---------- Gallery ---------- */
+
+/* Sized by App to window÷scale and centred on the stage centre, so once the
+   stage scale is applied it fills the window at the game's normal scale. */
+.gallery {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--page-bg);
+  justify-content: flex-start;
+  padding: 28px 24px 24px;
+  gap: 18px;
+}
+
+.gallery-title {
+  flex: none;
+  margin: 0;
+  font-size: 56px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  text-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+/* The roster scrolls between the title and the back button. */
+.gallery-scroll {
+  flex: 1;
+  width: 100%;
+  max-width: 1000px;
+  overflow-y: auto;
+  padding: 4px 12px;
+}
+
+.gallery-group {
+  margin-bottom: 12px;
+}
+
+.gallery-artist {
+  margin: 0 0 6px;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-align: left;
+  color: #ffd24d;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.15);
+  text-align: center;
+}
+
+.gallery-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+}
+
+.gallery-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: calc((100% - 5 * 16px) / 6);
+  padding: 12px 8px 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.gallery-name {
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.gallery-back {
+  flex: none;
+  margin-top: 0;
 }
 
 /* ---------- Intro ---------- */
@@ -532,6 +667,14 @@ body {
   }
 }
 
+/* In the gallery and intro the sprite isn't standing on an arena floor, so
+   centre it vertically within its area instead of bottom-anchoring it. */
+.battler-sprite.gallery-sprite img,
+.battler-sprite.intro-fighter img,
+.battler-sprite.menu-decor-sprite img {
+  object-position: center center;
+}
+
 /* Red "got hit" overlay. Opacity is driven from the battle loop. */
 .attack-flash {
   position: absolute;
@@ -688,6 +831,12 @@ body {
     animation-delay: var(--anim-delay, 0s);
   }
 
+  /* float: a balloon character drifting gently up and down */
+  &.move-float .fighter-body {
+    animation: move-float calc(2.4s * var(--anim-speed, 1)) ease-in-out infinite;
+    animation-delay: var(--anim-delay, 0s);
+  }
+
   /* Stop the walk cycle when knocked out or during the victory jump. Must come
      after the move-* rules above (same specificity) so it wins. */
   &.ko .fighter-body,
@@ -763,6 +912,16 @@ body {
   }
   100% {
     transform: translateY(0) scaleX(1.18) scaleY(0.82);
+  }
+}
+
+@keyframes move-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-14px);
   }
 }
 

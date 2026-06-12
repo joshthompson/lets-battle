@@ -9,12 +9,12 @@ export default function Credits(props: { onDone: () => void }) {
       <LanguageToggle />
       <h1 class="credits-title">{t('credits')}</h1>
       <div class="credits-body">
-        <p>{t('developedBy')}</p>
-        <p>{t('gameArtBy')} </p>
-        <p class="credits-heading">{t('characterArtBy')}</p>
-        <ul class="credits-artists">
-          {uniqueArtists().map(tx).join(', ')}
-        </ul>
+        <div class="credits-heading">{t('developedBy')}</div>
+        <div class="credits-artists">{t('developedByName')}</div>
+        <div class="credits-heading">{t('gameArtBy')} </div>
+        <div class="credits-artists">{t('gameArtByName')}</div>
+        <div class="credits-heading">{t('characterArtBy')}</div>
+        <div class="credits-artists">{uniqueArtists().map(tx).join(', ')}</div>
       </div>
       <button class="start-btn" onClick={props.onDone}>
         {t('menu')}

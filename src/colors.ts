@@ -25,7 +25,9 @@ function hexToHsl(hex: string): { h: number; s: number; l: number } {
 // marginally darker variant — keeps the original colour as the first stop.
 export function backgroundGradient(color: string): string {
   const { h, s, l } = hexToHsl(color);
-  const h2 = (h + 30) % 360;
+  const rand = (Math.floor(h) % 2 === 1 ? 1 : -1) * (Math.floor(h) % 3 + 1) / 3;
+  const h2 = (h + 50 * rand) % 360;
   const l2 = Math.max(0, l - 8);
-  return `linear-gradient(160deg, ${color} 0%, hsl(${h2.toFixed(0)}, ${s.toFixed(0)}%, ${l2.toFixed(0)}%) 100%)`;
+  const deg = Math.floor(h) % 8 * 100 + 140
+  return `linear-gradient(${deg}deg, ${color} 0%, hsl(${h2.toFixed(0)}, ${s.toFixed(0)}%, ${l2.toFixed(0)}%) 100%)`;
 }

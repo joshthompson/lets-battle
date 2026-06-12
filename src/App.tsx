@@ -7,9 +7,11 @@ import Battle from './Battle';
 import Victory from './Victory';
 import Draw from './Draw';
 import Credits from './Credits';
+import Gallery from './Gallery';
+import HowItWorks from './HowItWorks';
 import './styles.css';
 
-type Phase = 'menu' | 'intro' | 'battle' | 'victory' | 'draw' | 'credits';
+type Phase = 'menu' | 'intro' | 'battle' | 'victory' | 'draw' | 'credits' | 'gallery' | 'howItWorks';
 
 // Dev toggle: jump straight from the menu into the battle, skipping the intro.
 const SKIP_INTRO = false;
@@ -39,18 +41,39 @@ const App: Component = () => {
 
   // Scale the whole stage to fit the window (both shrinking and enlarging).
   const [scale, setScale] = createSignal(1);
-  const fit = () => setScale(Math.min(window.innerWidth / BASE_W, window.innerHeight / BASE_H));
+  const [viewport, setViewport] = createSignal({ w: BASE_W, h: BASE_H });
+  const fit = () => {
+    setScale(Math.min(window.innerWidth / BASE_W, window.innerHeight / BASE_H));
+    setViewport({ w: window.innerWidth, h: window.innerHeight });
+  };
   onMount(() => {
     fit();
     window.addEventListener('resize', fit);
     onCleanup(() => window.removeEventListener('resize', fit));
   });
 
+  // The gallery keeps the same scale as the rest of the game (so cards render at
+  // the same size — ~6 per row) but its logical canvas takes the window's aspect
+  // ratio instead of the fixed 1200x800, revealing more rows/columns at once.
+  const galleryW = () => viewport().w / scale();
+  const galleryH = () => viewport().h / scale();
+
   return (
     <div class="app-stage" style={{ width: `${BASE_W}px`, height: `${BASE_H}px`, transform: `scale(${scale()})` }}>
     <Switch>
       <Match when={phase() === 'menu'}>
-        <Menu onStart={start} onCredits={() => setPhase('credits')} />
+        <Menu
+          onStart={start}
+          onGallery={() => setPhase('gallery')}
+          onHowItWorks={() => setPhase('howItWorks')}
+          onCredits={() => setPhase('credits')}
+        />
+      </Match>
+      <Match when={phase() === 'gallery'}>
+        <Gallery onDone={() => setPhase('menu')} width={galleryW()} height={galleryH()} />
+      </Match>
+      <Match when={phase() === 'howItWorks'}>
+        <HowItWorks onDone={() => setPhase('menu')} />
       </Match>
       <Match when={phase() === 'credits'}>
         <Credits onDone={() => setPhase('menu')} />

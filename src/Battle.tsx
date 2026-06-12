@@ -781,7 +781,7 @@ export default function Battle(props: {
                 class={`fighter${e.ko ? ' ko' : ''}${
                   jumping() && e.id === championId() ? ' jumping' : ''
                 }${
-                  e.movementType === 'wobble' || e.movementType === 'jump'
+                  e.movementType === 'wobble' || e.movementType === 'jump' || e.movementType === 'float'
                     ? ` move-${e.movementType}`
                     : ''
                 }`}
