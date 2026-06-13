@@ -3,10 +3,10 @@ import { createSignal } from 'solid-js';
 // Minimal in-app i18n. A module-level signal holds the active locale so every
 // component can read it reactively via t(); switching it re-renders all text.
 export type Locale = 'en' | 'ru';
+export type LocaleText = string | { [locale in Locale]: string };
 
 const STORAGE_KEY = 'lets-battle-locale';
 
-export type LocaleText = string | { [locale: string]: string };
 
 // Prefer a previously chosen locale, otherwise default to Russian when the
 // browser's language list asks for it.
@@ -69,7 +69,7 @@ const STRINGS = {
   characterArtBy: { en: 'Character Art by:', ru: 'Художники персонажей:' },
   and: { en: 'and', ru: 'и' },
   title: { en: "Let's Battle", ru: 'Пора в бой!' },
-} as const;
+} as const satisfies Record<string, LocaleText>;
 
 export type StringKey = keyof typeof STRINGS;
 

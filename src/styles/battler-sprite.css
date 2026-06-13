@@ -1,0 +1,53 @@
+/* ---------- Battler sprite ---------- */
+
+.battler-sprite {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 4px;
+
+  & img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    /* contained, but standing on the floor (anchored to the bottom) */
+    object-position: center bottom;
+    display: block;
+    user-select: none;
+  }
+}
+
+/* In the gallery and intro the sprite isn't standing on an arena floor, so
+   centre it vertically within its area instead of bottom-anchoring it. */
+.battler-sprite.gallery-sprite img,
+.battler-sprite.intro-fighter img,
+.battler-sprite.menu-decor-sprite img {
+  object-position: center center;
+}
+
+/* Red "got hit" overlay. Opacity is driven from the battle loop. */
+.attack-flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+
+  /* No artwork: just a flat red fill over the colour block. */
+  &.flash-solid {
+    background: #ff2424;
+  }
+
+  /* Artwork: a solid red layer masked by the image's alpha, so only the
+     character lights up red. Aligned bottom-centre to match the image. */
+  &.flash-mask {
+    background: #ff2424;
+    mask-size: contain;
+    mask-position: center bottom;
+    mask-repeat: no-repeat;
+    -webkit-mask-size: contain;
+    -webkit-mask-position: center bottom;
+    -webkit-mask-repeat: no-repeat;
+  }
+}
+

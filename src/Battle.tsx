@@ -2,18 +2,26 @@ import { createStore, produce } from 'solid-js/store';
 import { createSignal, For, onCleanup, onMount, Show } from 'solid-js';
 import type { Battler } from './battlers';
 import BattlerSprite from './BattlerSprite';
+import Arena from './Arena';
 import { t, tx } from './i18n';
-import arenaImg from './assets/arena.jpg';
 import launcherBaseImg from './assets/misc/launcher-base.png';
 import launcherTubeImg from './assets/misc/launcher-tube.png';
 import explode1Img from './assets/misc/explode1.png';
 import explode2Img from './assets/misc/explode2.png';
 import explode3Img from './assets/misc/explode3.png';
 import explode4Img from './assets/misc/explode4.png';
+import random1Img from './assets/misc/random1.png';
+import random2Img from './assets/misc/random2.png';
+import random3Img from './assets/misc/random3.png';
+import random4Img from './assets/misc/random4.png';
 import { getItem, SPAWN_ITEMS, LAUNCHER_ITEMS, type ItemType } from './items';
 
 // Explosion animation frames, shown in turn once a bomb lands.
 const EXPLODE_FRAMES = [explode1Img, explode2Img, explode3Img, explode4Img];
+
+// Squiggle frames cycled in the launcher base while reloading.
+const RANDOM_FRAMES = [random1Img, random2Img, random3Img, random4Img];
+const RANDOM_FRAME_MS = 100; // how long each squiggle shows
 
 // Single source of truth for arena geometry. The floor is the oval the fighters
 // move within, inset from the arena edges to match the background art. These
@@ -71,6 +79,38 @@ const TRAP_DAMAGE = 20; // damage dealt when a fighter steps on a bear trap
 const TRAP_HOLD_MS = 1000; // how long the sprung trap stays before fading
 const TRAP_FADE_MS = 400; // how long the sprung trap takes to fade out
 
+// --- spring (stationary): launches whoever steps on it to a random spot ---
+const SPRING_REST_SCALE = 0.3; // resting yScale — compressed flat on the floor
+const SPRING_ANIM_MS = 700; // duration of the expand-and-settle "boing"
+const SPRING_AIR_MS = 2000; // how long a launched fighter is airborne
+const SPRING_AIR_HEIGHT = 260; // peak height of the launch arc, px
+const SPRING_MAX_USES = 2; // distinct fighters it can launch before it's spent
+const SPRING_HOLD_MS = 1000; // after its last use, how long before it fades
+const SPRING_FADE_MS = 400; // fade-out duration once spent
+
+// The boing: from rest, expand up past full, then a couple of damped bounces
+// back to rest. Linear-interpolated keyframes (progress -> yScale).
+const SPRING_SCALE_KEYS: [number, number][] = [
+  [0, SPRING_REST_SCALE],
+  [0.22, 1.05],
+  [0.42, 0.72],
+  [0.6, 0.95],
+  [0.78, 0.84],
+  [1, SPRING_REST_SCALE],
+];
+function springScaleY(elapsed: number): number {
+  if (elapsed >= SPRING_ANIM_MS) return SPRING_REST_SCALE;
+  const p = elapsed / SPRING_ANIM_MS;
+  for (let i = 1; i < SPRING_SCALE_KEYS.length; i++) {
+    if (p <= SPRING_SCALE_KEYS[i][0]) {
+      const [p0, v0] = SPRING_SCALE_KEYS[i - 1];
+      const [p1, v1] = SPRING_SCALE_KEYS[i];
+      return v0 + (v1 - v0) * ((p - p0) / (p1 - p0));
+    }
+  }
+  return SPRING_REST_SCALE;
+}
+
 // --- bomb (launcher-only): detonates where it lands ---
 const BOMB_DAMAGE = 20; // peak damage at the blast centre
 const BOMB_INNER = 50; // within this radius a fighter takes full damage
@@ -111,6 +151,11 @@ interface Item {
   flying: boolean; // launched projectile still in the air (arcing toward the floor)
   lift: number; // height above the floor (px); the sprite renders this far above its shadow
   vlift: number; // vertical velocity of the arc (px/sec; gravity pulls it back down)
+  // spring only:
+  springAt: number; // timestamp of the last boing trigger (0 = at rest)
+  sprungIds: number[]; // distinct fighter ids it has launched
+  doneAt: number; // timestamp it became fully used (0 = still usable)
+  scaleY: number; // current display yScale (springs compress to SPRING_REST_SCALE)
 }
 
 // A bomb blast playing out where a launched bomb came to rest.
@@ -147,6 +192,14 @@ interface Entity extends Battler {
   scale: number; // current sprite scale (display; 1 or STRENGTH_SCALE)
   nextAttack: number; // timestamp the fighter may attack again
   nextRetarget: number; // timestamp to re-pick a heading
+  // spring launch (airborne arc to a random spot; invulnerable in the air):
+  airUntil: number; // timestamp the fighter lands (0 = grounded)
+  airStart: number; // timestamp the launch began
+  airFromX: number; // launch origin
+  airFromY: number;
+  airToX: number; // landing target
+  airToY: number;
+  lift: number; // current height above the floor (display; 0 on the ground)
 }
 
 function randomHeading(): { vx: number; vy: number } {
@@ -198,6 +251,13 @@ export default function Battle(props: {
       scale: 1,
       nextAttack: now0 + Math.random() * 400,
       nextRetarget: now0 + 500 + Math.random() * 1000,
+      airUntil: 0,
+      airStart: 0,
+      airFromX: 0,
+      airFromY: 0,
+      airToX: 0,
+      airToY: 0,
+      lift: 0,
     };
   });
 
@@ -229,6 +289,7 @@ export default function Battle(props: {
     powerDir: 1,
     reloadUntil: 0,
     reloadProgress: 0, // 0..1, drives the progress bar in the button while reloading
+    randomFrame: 0, // index into RANDOM_FRAMES, cycled while reloading
   });
 
   const fireLauncher = () => {
@@ -262,6 +323,10 @@ export default function Battle(props: {
           flying: true,
           lift: 0,
           vlift: LAUNCH_LIFT_MIN + (LAUNCH_LIFT_MAX - LAUNCH_LIFT_MIN) * launcher.power,
+          springAt: 0,
+          sprungIds: [],
+          doneAt: 0,
+          scaleY: def.type === 'spring' ? SPRING_REST_SCALE : 1,
         },
       ]);
       setLauncher({ phase: 'reloading', reloadUntil: performance.now() + RELOAD_MS, reloadProgress: 0 });
@@ -271,6 +336,10 @@ export default function Battle(props: {
   // The last fighter standing celebrates in place before the victory screen.
   const [championId, setChampionId] = createSignal<number | null>(null);
   const [jumping, setJumping] = createSignal(false);
+  // True once the match is decided (a winner or a draw) — greys out the arena.
+  const [over, setOver] = createSignal(false);
+  // When there's a single winner, the arena zooms in on their position.
+  const [zoom, setZoom] = createSignal<{ x: number; y: number } | null>(null);
 
   let raf = 0;
   let last = now0;
@@ -344,6 +413,7 @@ export default function Battle(props: {
             }
           } else if (l.phase === 'reloading') {
             l.reloadProgress = Math.min(1, 1 - (l.reloadUntil - now) / RELOAD_MS);
+            l.randomFrame = Math.floor(now / RANDOM_FRAME_MS) % RANDOM_FRAMES.length;
             if (now >= l.reloadUntil) {
               // Resume sweeping from the angle the barrel was left at (it was
               // locked when the last shot fired), so the aim doesn't jump.
@@ -382,6 +452,10 @@ export default function Battle(props: {
             flying: false,
             lift: 0,
             vlift: 0,
+            springAt: 0,
+            sprungIds: [],
+            doneAt: 0,
+            scaleY: def.type === 'spring' ? SPRING_REST_SCALE : 1,
           },
         ]);
       }
@@ -424,6 +498,21 @@ export default function Battle(props: {
                 p.vx = 0;
                 p.vy = 0;
                 p.vlift = 0;
+              }
+            }
+            continue;
+          }
+          if (p.type === 'spring') {
+            // Drive the boing scale, and once spent (two fighters launched) hold
+            // briefly then fade out.
+            p.scaleY = p.springAt ? springScaleY(now - p.springAt) : SPRING_REST_SCALE;
+            if (p.springAt && now - p.springAt >= SPRING_ANIM_MS) p.springAt = 0;
+            if (p.doneAt) {
+              const since = now - p.doneAt;
+              if (since >= SPRING_HOLD_MS) {
+                const f = (since - SPRING_HOLD_MS) / SPRING_FADE_MS;
+                p.opacity = f >= 1 ? 0 : 1 - f;
+                if (f >= 1) expired.push(p.id);
               }
             }
             continue;
@@ -476,6 +565,7 @@ export default function Battle(props: {
 
     const consumed: number[] = []; // collected items to remove
     const sprung: number[] = []; // bear traps triggered this tick
+    const springLaunches = new Map<number, number[]>(); // spring id -> fighter ids it launched this tick
 
     setEntities(
       produce((list: Entity[]) => {
@@ -483,6 +573,26 @@ export default function Battle(props: {
 
         // --- movement & simple AI ---
         for (const e of alive) {
+          // Spring launch: arc from origin to a random landing spot over 2s,
+          // ignoring normal movement. Lift is a parabola peaking mid-flight.
+          if (now < e.airUntil) {
+            const p = Math.min(1, (now - e.airStart) / SPRING_AIR_MS);
+            e.x = e.airFromX + (e.airToX - e.airFromX) * p;
+            e.y = e.airFromY + (e.airToY - e.airFromY) * p;
+            e.lift = SPRING_AIR_HEIGHT * 4 * p * (1 - p);
+            const dx = e.airToX - e.airFromX;
+            if (dx > 8) e.facing = 1;
+            else if (dx < -8) e.facing = -1;
+            continue;
+          }
+          if (e.lift !== 0) {
+            // Just landed: settle on the ground and pick a fresh heading.
+            e.lift = 0;
+            const h = randomHeading();
+            e.vx = h.vx;
+            e.vy = h.vy;
+          }
+
           if (now >= e.nextRetarget) {
             e.nextRetarget = now + 600 + Math.random() * 1200;
 
@@ -491,7 +601,7 @@ export default function Battle(props: {
             let pu: Item | null = null;
             let puD = ITEM_SIGHT;
             for (const p of items) {
-              if (p.type === 'beartrap' || p.flying) continue;
+              if (p.type === 'beartrap' || p.type === 'spring' || p.flying) continue;
               const d = Math.hypot(p.x - e.x, p.y - e.y);
               if (d < puD) {
                 puD = d;
@@ -564,9 +674,11 @@ export default function Battle(props: {
 
         // --- combat ---
         for (const e of alive) {
+          if (now < e.airUntil) continue; // airborne: can't attack
           // find the closest living enemy we are touching & facing
           for (const o of alive) {
             if (o === e || o.hp <= 0) continue;
+            if (now < o.airUntil) continue; // airborne: invulnerable
             const dx = o.x - e.x;
             const dy = o.y - e.y;
             const dist = Math.hypot(dx, dy);
@@ -604,6 +716,7 @@ export default function Battle(props: {
         for (const d of detonations) {
           for (const e of alive) {
             if (e.ko) continue;
+            if (now < e.airUntil) continue; // airborne: invulnerable
             const dist = Math.hypot(e.x - d.x, e.y - d.y);
             if (dist >= BOMB_OUTER) continue;
             const falloff =
@@ -624,12 +737,30 @@ export default function Battle(props: {
 
         // --- collect items / spring traps ---
         for (const e of alive) {
+          if (now < e.airUntil) continue; // airborne: can't collect or trigger
           for (const p of items) {
             if (consumed.includes(p.id) || sprung.includes(p.id)) continue;
             if (p.flying) continue; // a mid-flight projectile can't be picked up yet
             if (p.sprungAt) continue; // an already-sprung trap is inert
             if (Math.hypot(p.x - e.x, p.y - e.y) >= ITEM_PICKUP) continue;
-            if (p.type === 'beartrap') {
+            if (p.type === 'spring') {
+              // Launches whoever stands on it up into the air to a random spot.
+              // Only two distinct fighters; then it's spent (fades below).
+              if (p.doneAt) continue; // already spent
+              const launched = springLaunches.get(p.id) ?? [];
+              const distinct = new Set([...p.sprungIds, ...launched]);
+              if (distinct.size >= SPRING_MAX_USES || distinct.has(e.id)) continue;
+              launched.push(e.id);
+              springLaunches.set(p.id, launched);
+              // Send this fighter airborne to a random floor point (invulnerable).
+              const dest = randomFloorPoint();
+              e.airStart = now;
+              e.airUntil = now + SPRING_AIR_MS;
+              e.airFromX = e.x;
+              e.airFromY = e.y;
+              e.airToX = dest.x;
+              e.airToY = dest.y;
+            } else if (p.type === 'beartrap') {
               // Snaps shut on whoever stands in the middle: 20 damage, which a
               // shield does NOT block. The trap is updated in the items store below.
               sprung.push(p.id);
@@ -693,16 +824,34 @@ export default function Battle(props: {
       );
     }
 
+    // Fire the boing on any springs that launched a fighter this tick; mark them
+    // spent (to fade) once they've sent off SPRING_MAX_USES distinct fighters.
+    if (springLaunches.size) {
+      setItems(
+        produce((list: Item[]) => {
+          for (const p of list) {
+            const launched = springLaunches.get(p.id);
+            if (!launched || !launched.length) continue;
+            p.springAt = now;
+            p.sprungIds = [...new Set([...p.sprungIds, ...launched])];
+            if (p.sprungIds.length >= SPRING_MAX_USES && !p.doneAt) p.doneAt = now;
+          }
+        }),
+      );
+    }
+
     // --- win check ---
     const living = entities.filter((e) => !e.ko);
     if (!finished && living.length <= 1) {
       finished = true;
+      setOver(true);
       cancelAnimationFrame(raf);
       if (living.length === 1) {
         const champ = living[0];
         // Winner stops moving immediately, starts jumping after 1s, and we
         // hold the celebration for 4s before showing the victory screen.
         setChampionId(champ.id);
+        setZoom({ x: champ.x, y: champ.y });
         timers.push(setTimeout(() => setJumping(true), 1000));
         timers.push(setTimeout(() => props.onWin(champ), 4000));
       } else {
@@ -744,19 +893,7 @@ export default function Battle(props: {
 
   return (
     <div class="screen battle">
-      <div
-        class="arena"
-        style={{
-          'background-image': `url(${arenaImg})`,
-          '--arena-w': `${ARENA.width}px`,
-          '--arena-h': `${ARENA.height}px`,
-          '--floor-top': `${ARENA.floor.top}px`,
-          '--floor-right': `${ARENA.floor.right}px`,
-          '--floor-bottom': `${ARENA.floor.bottom}px`,
-          '--floor-left': `${ARENA.floor.left}px`,
-        }}
-      >
-        <div class="arena-floor" />
+      <Arena geometry={ARENA} greyscale={over()} zoom={zoom()}>
         <For each={entities}>
           {(e) => (
             <div
@@ -780,7 +917,7 @@ export default function Battle(props: {
               <div
                 class={`fighter${e.ko ? ' ko' : ''}${
                   jumping() && e.id === championId() ? ' jumping' : ''
-                }${
+                }${e.lift > 0 ? ' airborne' : ''}${
                   e.movementType === 'wobble' || e.movementType === 'jump' || e.movementType === 'float'
                     ? ` move-${e.movementType}`
                     : ''
@@ -792,6 +929,8 @@ export default function Battle(props: {
                   '--ko-dx': `${e.koDir * (FIGHTER_MAX_H / 2 - sizes[e.id].h / 2)}px`,
                   '--ko-dy': `${FIGHTER_MAX_H / 2 - sizes[e.id].w / 2}px`,
                   '--ko-rot': `${e.koDir * 90}deg`,
+                  // Spring launch: lift the sprite off the floor (shadow stays put).
+                  ...(e.lift > 0 ? { transform: `translateY(${-e.lift}px)` } : {}),
                 }}
               >
                 {/* scaleX carries facing; scale grows from the feet (strength) */}
@@ -843,6 +982,8 @@ export default function Battle(props: {
                   src={p.imageUrl}
                   alt={p.type}
                   draggable={false}
+                  // Spring compresses/expands vertically (from its base on the floor).
+                  style={p.type === 'spring' ? { transform: `scaleX(1.5) scaleY(${p.scaleY})` } : undefined}
                 />
               </div>
             </div>
@@ -894,6 +1035,16 @@ export default function Battle(props: {
               draggable={false}
             />
           </Show>
+          {/* While reloading, flicker through squiggle frames in the base ring. */}
+          <Show when={launcher.phase === 'reloading'}>
+            <img
+              class="launcher-item launcher-reload-squiggle"
+              src={RANDOM_FRAMES[launcher.randomFrame]}
+              style={{ left: `${LAUNCHER_X}px`, top: `${LAUNCHER_PIVOT_Y}px` }}
+              alt=""
+              draggable={false}
+            />
+          </Show>
           <div class="launcher-controls" style={{ left: `${LAUNCHER_X + 62}px`, top: `${LAUNCHER_PIVOT_Y}px` }}>
             <Show when={launcher.phase === 'powering'}>
               <div class="launcher-power">
@@ -915,7 +1066,7 @@ export default function Battle(props: {
             </button>
           </div>
         </div>
-      </div>
+      </Arena>
     </div>
   );
 }

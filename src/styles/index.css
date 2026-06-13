@@ -1,0 +1,16 @@
+/* Aggregated stylesheet. Split by screen/section into the files below; imported
+   in the original source order so the cascade is unchanged. */
+@import './base.css';
+@import './language-toggle.css';
+@import './menu.css';
+@import './credits.css';
+@import './how-it-works.css';
+@import './gallery.css';
+@import './intro.css';
+@import './streaks.css';
+@import './battler-sprite.css';
+@import './battle.css';
+@import './items.css';
+@import './launcher.css';
+@import './victory.css';
+@import './draw.css';

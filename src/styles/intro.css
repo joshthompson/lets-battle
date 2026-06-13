@@ -1,0 +1,300 @@
+/* ---------- Intro ---------- */
+
+.intro {
+  align-items: center;
+  justify-content: center;
+}
+
+.skip-intro-btn {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  z-index: 3;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.4);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.6);
+  }
+}
+
+/* The button is inside the stage, which scales down on small windows — leaving
+   it tiny. Media queries read the real window (ignoring the transform), so the
+   bump is an exact multiple of the rendered size: ~2x on tablets, ~3x on phones. */
+@media (max-width: 900px) {
+  .skip-intro-btn {
+    bottom: 32px;
+    right: 32px;
+    padding: 16px 32px;
+    font-size: 28px;
+    border-radius: 12px;
+  }
+}
+
+@media (max-width: 600px) {
+  .skip-intro-btn {
+    bottom: 44px;
+    right: 44px;
+    padding: 24px 48px;
+    font-size: 42px;
+    border-radius: 18px;
+  }
+}
+
+.intro-card {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: intro-enter 0.5s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+@keyframes intro-enter {
+  from {
+    transform: translateX(-120px) scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* A pool of entrance animations; Intro picks a different one per fighter. */
+@keyframes intro-left {
+  from {
+    transform: translateX(-160px) scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes intro-right {
+  from {
+    transform: translateX(160px) scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes intro-zoom {
+  from {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes intro-drop {
+  from {
+    transform: translateY(-180px) scale(0.85);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes intro-rise {
+  from {
+    transform: translateY(180px) scale(0.85);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes intro-spin {
+  from {
+    transform: rotate(-18deg) scale(0.5);
+    opacity: 0;
+  }
+  to {
+    transform: rotate(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.intro-fighter {
+  border: 4px solid #fff;
+  box-shadow: 0 0 0 6px rgba(0, 0, 0, 0.3), 0 20px 50px rgba(0, 0, 0, 0.6);
+
+  /* With artwork, drop the framed colour box and show just the sprite. */
+  &.has-image {
+    border: none;
+    box-shadow: none;
+  }
+}
+
+/* ---------- Looping idle animations for the intro sprite ----------
+   Applied to a wrapper (not the sprite img) so it composes with the card's
+   entrance animation. A short delay lets the entrance settle first; fill-mode
+   keeps the sprite at its neutral pose until then. Intro cycles the modifier
+   class per fighter. */
+.intro-fighter-anim {
+  display: inline-block;
+  animation-iteration-count: infinite;
+  animation-delay: 0.35s;
+  animation-fill-mode: both;
+
+  /* springy bounce: squash-anticipate, launch with stretch, land and rebound */
+  &.sprite-spring {
+    transform-origin: 50% 100%;
+    animation-name: sprite-spring;
+    animation-duration: 1s;
+    animation-timing-function: cubic-bezier(0.3, 0.7, 0.4, 1);
+  }
+
+  /* wobble: rock back and forth, pivoting at the feet */
+  &.sprite-wobble {
+    transform-origin: 50% 100%;
+    animation-name: sprite-wobble;
+    animation-duration: 1s;
+    animation-timing-function: ease-in-out;
+  }
+
+  /* a couple of x-scale flips, like the sprite spinning to face away and back */
+  &.sprite-flip {
+    animation-name: sprite-flip;
+    animation-duration: 1.1s;
+    animation-timing-function: ease-in-out;
+  }
+
+  /* 3D matrix swing: rotate ±25deg about the Y axis with perspective baked into
+     the matrix3d (perspective(800px) * rotateY) so it tilts like a turning card */
+  &.sprite-tilt3d {
+    transform-origin: 50% 50%;
+    animation-name: sprite-tilt3d;
+    animation-duration: 1.3s;
+    animation-timing-function: ease-in-out;
+  }
+}
+
+@keyframes sprite-spring {
+  0%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+  12% {
+    transform: translateY(0) scale(1.12, 0.86);
+  }
+  40% {
+    transform: translateY(-46px) scale(0.92, 1.12);
+  }
+  60% {
+    transform: translateY(0) scale(1.1, 0.9);
+  }
+  76% {
+    transform: translateY(-12px) scale(0.98, 1.04);
+  }
+  88% {
+    transform: translateY(0) scale(1.03, 0.98);
+  }
+}
+
+@keyframes sprite-wobble {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  16% {
+    transform: rotate(-8deg);
+  }
+  33% {
+    transform: rotate(6deg);
+  }
+  50% {
+    transform: rotate(-5deg);
+  }
+  66% {
+    transform: rotate(4deg);
+  }
+  83% {
+    transform: rotate(-2deg);
+  }
+}
+
+@keyframes sprite-flip {
+  0% {
+    transform: scaleX(1);
+  }
+  25% {
+    transform: scaleX(-1);
+  }
+  50% {
+    transform: scaleX(1);
+  }
+  75% {
+    transform: scaleX(-1);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes sprite-tilt3d {
+  0%,
+  100% {
+    transform: matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, -0.00125, 0, 0, 0, 1);
+  }
+  25% {
+    transform: matrix3d(0.9063, 0, -0.4226, 0.0005283, 0, 1, 0, 0, 0.4226, 0, 0.9063, -0.0011329, 0, 0, 0, 1);
+  }
+  50% {
+    transform: matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, -0.00125, 0, 0, 0, 1);
+  }
+  75% {
+    transform: matrix3d(0.9063, 0, 0.4226, -0.0005283, 0, 1, 0, 0, -0.4226, 0, 0.9063, -0.0011329, 0, 0, 0, 1);
+  }
+}
+
+.intro-name {
+  margin-top: 32px;
+  font-size: 72px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 6px;
+  color: #fff;
+  text-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+}
+
+.intro-by {
+  margin-top: 6px;
+  font-size: 24px;
+  font-weight: 600;
+  font-style: italic;
+  letter-spacing: 2px;
+  color: #fff;
+  opacity: 0.75;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.4);
+}
+
+.intro-vs {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  opacity: 0.8;
+  margin-top: 8px;
+}
+

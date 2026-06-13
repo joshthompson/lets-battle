@@ -21,7 +21,7 @@ import agentToeImg from './assets/battlers/agent-toe.png';
 import farfellaImg from './assets/battlers/farfella.png';
 import henryImg from './assets/battlers/henry.png';
 import noteGuyImg from './assets/battlers/note-guy.png';
-import sirGarethImg from './assets/battlers/sir-gareth.png';
+import billoonImg from './assets/battlers/billoon.png';
 
 import { LocaleText } from './i18n';
 
@@ -162,9 +162,9 @@ const ARTIST_BATTLERS: Artist[] = [
         movementType: 'wobble',
       },
       {
-        name: { en: 'Sir Gareth', ru: 'Сэр Гарет' },
+        name: { en: 'Billoon', ru: 'Биллон' },
         color: '#FAE58B',
-        imageUrl: sirGarethImg,
+        imageUrl: billoonImg,
         movementType: 'float',
       },
     ],

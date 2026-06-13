@@ -1,0 +1,84 @@
+/* ---------- Items ---------- */
+
+/* Opacity is driven inline (so a sprung trap can fade out), so the spawn pop-in
+   uses the default fill mode — it must not pin opacity after it finishes. */
+.item-wrap {
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  pointer-events: none;
+  animation: item-in 0.5s ease;
+}
+
+@keyframes item-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.item-shadow {
+  position: absolute;
+  left: 50%;
+  bottom: -4px;
+  width: 40px;
+  height: 12px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0) 70%);
+}
+
+/* Carries a launched item's altitude (translateY) so the sprite floats above
+   its grounded shadow. The bob/glow animation on the img inside composes with it. */
+.item-rise {
+  position: absolute;
+  inset: 0;
+}
+
+.item {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  /* bob up and down off the floor, with a subtle brightness pulse */
+  transform-origin: 50% 100%;
+  animation:
+    item-bob 1s ease-in-out infinite,
+    item-glow 1s ease-in-out infinite;
+
+  /* The bear trap lies flat on the ground — no bobbing or glow. */
+  &.item-static {
+    animation: none;
+  }
+}
+
+@keyframes item-glow {
+  0%,
+  100% {
+    filter: brightness(1.25);
+  }
+  50% {
+    filter: brightness(1.5);
+  }
+}
+
+@keyframes item-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* Bomb blast — a short frame-by-frame burst centred where the bomb landed. */
+.explosion {
+  position: absolute;
+  object-fit: contain;
+  pointer-events: none;
+}
+

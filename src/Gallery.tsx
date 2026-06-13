@@ -10,14 +10,14 @@ import { backgroundGradient } from './colors';
 // gallery fills the window at the game's normal scale rather than the fixed
 // 1200x800 box.
 export default function Gallery(props: { onDone: () => void; width: number; height: number }) {
-  const groups = battlersByArtist();
+  const groups = () => battlersByArtist().sort((a, b) => a.battlers.length - b.battlers.length);
 
   return (
     <div class="screen gallery" style={{ width: `${props.width}px`, height: `${props.height}px` }}>
       <LanguageToggle />
       <h1 class="gallery-title">{t('gallery')}</h1>
       <div class="gallery-scroll">
-        <For each={groups}>
+        <For each={groups()}>
           {(group) => (
             <section class="gallery-group">
               <h2 class="gallery-artist">{tx(group.artist)}</h2>

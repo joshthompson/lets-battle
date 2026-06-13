@@ -9,7 +9,7 @@ import Draw from './Draw';
 import Credits from './Credits';
 import Gallery from './Gallery';
 import HowItWorks from './HowItWorks';
-import './styles.css';
+import './styles/index.css';
 
 type Phase = 'menu' | 'intro' | 'battle' | 'victory' | 'draw' | 'credits' | 'gallery' | 'howItWorks';
 

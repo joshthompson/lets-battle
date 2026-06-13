@@ -1,0 +1,11 @@
+/* ---------- How It Works ---------- */
+
+.how-it-works-body {
+  max-width: 760px;
+  text-align: center;
+
+  & p {
+    margin: 0 0 18px;
+  }
+}
+

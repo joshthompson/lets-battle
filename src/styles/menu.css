@@ -1,0 +1,124 @@
+/* ---------- Menu ---------- */
+
+/* Decorative battlers in the gutters either side of the menu. Desaturated and
+   pulsing: fade in to 0.5 over 2s, fade out over 2s, pause 1s, then loop. The
+   right one is mirrored and offset by half the cycle so the two alternate. */
+.menu-decor {
+  --animation-duration: 7s;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  filter: saturate(0);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 0;
+  animation: menu-decor-pulse var(--animation-duration) ease-in-out infinite;
+}
+
+.menu-decor-left {
+  left: 5%;
+}
+
+.menu-decor-right {
+  right: 5%;
+  transform: translateY(-50%) scaleX(-1);
+  /* Positive (not negative) delay so it stays hidden at its base opacity:0
+     until its turn, rather than starting mid-fade at first frame. */
+  animation-delay: calc(var(--animation-duration) / 2);
+}
+
+@keyframes menu-decor-pulse {
+  0% {
+    opacity: 0;
+  }
+  40% {
+    opacity: 0.3;
+  }
+  80% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.menu-logo {
+  font-size: 84px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, #ff4d4d, #ffd24d, #4dd2ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 0 40px rgba(255, 80, 80, 0.4);
+  animation: logo-pop 0.6s ease-out;
+  margin: 0;
+
+  & .lets {
+    display: block;
+    font-size: 36px;
+    letter-spacing: 12px;
+    -webkit-text-fill-color: #fff;
+    color: #fff;
+  }
+}
+
+@keyframes logo-pop {
+  from {
+    transform: scale(0.6) rotate(-4deg);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
+}
+
+.start-btn {
+  margin-top: 48px;
+  padding: 18px 56px;
+  font-size: 28px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  color: #fff;
+  background: linear-gradient(135deg, #ff4d4d, #b30000);
+  border: 3px solid #fff;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 8px 0 #800000, 0 12px 24px rgba(0, 0, 0, 0.5);
+  transition: transform 0.08s ease;
+
+  &:hover {
+    background: linear-gradient(135deg, #f96b6b, #bd1616);
+  }
+
+  &:active {
+    transform: translateY(6px);
+    box-shadow: 0 2px 0 #800000;
+  }
+}
+
+.menu-credits-btn,
+.menu-gallery-btn,
+.menu-howitworks-btn {
+  margin-top: 22px;
+  padding: 8px 22px;
+  font-size: 16px;
+  font-weight: 700;
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #fff;
+  background: none;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.08s ease;
+
+  &:hover {
+    border-color: #fff;
+  }
+}
+
