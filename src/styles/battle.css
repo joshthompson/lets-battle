@@ -241,6 +241,13 @@
     animation-delay: var(--anim-delay, 0s);
   }
 
+  /* slither: a snake squeezing side to side, scaleX 1 → 0.7 → 1 */
+  &.move-slither .fighter-body {
+    transform-origin: 50% 100%;
+    animation: move-slither calc(0.6s * var(--anim-speed, 1)) ease-in-out infinite;
+    animation-delay: var(--anim-delay, 0s);
+  }
+
   /* Stop the walk cycle when knocked out or during the victory jump. Must come
      after the move-* rules above (same specificity) so it wins. */
   &.ko .fighter-body,
@@ -335,6 +342,16 @@
   }
   50% {
     transform: translateY(-14px);
+  }
+}
+
+@keyframes move-slither {
+  0%,
+  100% {
+    transform: scaleX(1);
+  }
+  50% {
+    transform: scaleX(0.7);
   }
 }
 

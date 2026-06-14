@@ -1,6 +1,6 @@
 import { createStore, produce } from 'solid-js/store';
 import { createSignal, For, onCleanup, onMount, Show } from 'solid-js';
-import type { Battler } from './battlers';
+import { teamKey, type Battler } from './battlers';
 import BattlerSprite from './BattlerSprite';
 import Arena from './Arena';
 import { t, tx } from './i18n';
@@ -233,7 +233,9 @@ function insideEllipse(x: number, y: number): boolean {
 
 export default function Battle(props: {
   battlers: Battler[];
-  onWin: (b: Battler) => void;
+  // The whole winning team — survivors and fallen alike, each tagged with its
+  // knocked-out state so the victory screen can lay the team out as it ended.
+  onWin: (team: { battler: Battler; ko: boolean; koDir: 1 | -1 }[]) => void;
   onDraw: (battlers: Battler[]) => void;
 }) {
   const n = props.battlers.length;
@@ -356,12 +358,12 @@ export default function Battle(props: {
     }
   };
 
-  // The last fighter standing celebrates in place before the victory screen.
-  const [championId, setChampionId] = createSignal<number | null>(null);
+  // The surviving team celebrates in place before the victory screen.
+  const [championIds, setChampionIds] = createSignal<number[]>([]);
   const [jumping, setJumping] = createSignal(false);
   // True once the match is decided (a winner or a draw) — greys out the arena.
   const [over, setOver] = createSignal(false);
-  // When there's a single winner, the arena zooms in on their position.
+  // Once the match is decided, the arena zooms in on the winning team.
   const [zoom, setZoom] = createSignal<{ x: number; y: number } | null>(null);
 
   let raf = 0;
@@ -655,11 +657,13 @@ export default function Battle(props: {
               // Go grab the item.
               headTo(pu.x, pu.y);
             } else if (Math.random() < 0.6) {
-              // Charge the nearest living enemy.
+              // Charge the nearest living enemy (skip team-mates — they can't
+              // be hurt, so chasing them just stalls the fight).
               let best: Entity | null = null;
               let bestD = Infinity;
               for (const o of alive) {
                 if (o === e) continue;
+                if (teamKey(e) === teamKey(o)) continue;
                 const d = (o.x - e.x) ** 2 + (o.y - e.y) ** 2;
                 if (d < bestD) {
                   bestD = d;
@@ -712,6 +716,7 @@ export default function Battle(props: {
           // find the closest living enemy we are touching & facing
           for (const o of alive) {
             if (o === e || o.hp <= 0) continue;
+            if (teamKey(e) === teamKey(o)) continue; // team-mates don't hurt each other
             if (now < o.airUntil) continue; // airborne: invulnerable
             const dx = o.x - e.x;
             const dy = o.y - e.y;
@@ -786,6 +791,7 @@ export default function Battle(props: {
           const by = bodyMidY(e);
           for (const o of alive) {
             if (o === e || o.hp <= 0) continue;
+            if (teamKey(e) === teamKey(o)) continue; // team-mates don't hurt each other
             if (now < o.airUntil) continue; // airborne: invulnerable
             if (now < o.shieldUntil) continue; // shielded: blade is turned aside
             if (e.swordHitIds.includes(o.id)) continue; // already cut this rotation
@@ -923,21 +929,34 @@ export default function Battle(props: {
     }
 
     // --- win check ---
+    // The match is decided once every survivor belongs to a single team (or
+    // nobody is left). Team-mates never hurt each other, so the last team
+    // standing keeps all its survivors.
     const living = entities.filter((e) => !e.ko);
-    if (!finished && living.length <= 1) {
+    const livingTeams = new Set(living.map(teamKey));
+    if (!finished && livingTeams.size <= 1) {
       finished = true;
       setOver(true);
       cancelAnimationFrame(raf);
-      if (living.length === 1) {
-        const champ = living[0];
-        // Winner stops moving immediately, starts jumping after 1s, and we
-        // hold the celebration for 4s before showing the victory screen.
-        setChampionId(champ.id);
-        setZoom({ x: champ.x, y: champ.y });
+      if (living.length >= 1) {
+        // The whole surviving team wins. Everyone stops, the camera frames the
+        // team's centroid, they jump after 1s, and we hold for 4s before the
+        // victory screen.
+        setChampionIds(living.map((e) => e.id));
+        const cx = living.reduce((s, e) => s + e.x, 0) / living.length;
+        const cy = living.reduce((s, e) => s + e.y, 0) / living.length;
+        setZoom({ x: cx, y: cy });
+        // The whole winning team, survivors first then the fallen, each with its
+        // knocked-out state for the victory line-up.
+        const champKey = teamKey(living[0]);
+        const team = entities
+          .filter((e) => teamKey(e) === champKey)
+          .sort((a, b) => Number(a.ko) - Number(b.ko))
+          .map((e) => ({ battler: props.battlers.find((b) => b.id === e.id)!, ko: e.ko, koDir: e.koDir }));
         timers.push(setTimeout(() => setJumping(true), 1000));
-        timers.push(setTimeout(() => props.onWin(champ), 4000));
+        timers.push(setTimeout(() => props.onWin(team), 4000));
       } else {
-        // Nobody left: the last 2+ fighters were knocked out on the same tick.
+        // Nobody left: the last fighters of two+ teams fell on the same tick.
         // Declare a draw between those who fell at that final moment.
         const lastAt = Math.max(...entities.map((e) => e.koAt));
         const drawn = entities
@@ -990,7 +1009,7 @@ export default function Battle(props: {
                 class="fighter-shadow"
                 style={{ width: `${(e.ko ? sizes[e.id].h : sizes[e.id].w) * e.scale}px` }}
               />
-              <span class="label">{tx(e.name)}</span>
+              <span class="label" style={{ color: e.teamColor }}>{tx(e.name)}</span>
               {/* Per-fighter health bar; fades out once knocked out. */}
               <div class="health-bar" style={{ opacity: e.ko ? 0 : 1 }}>
                 <div class="health-bar-damage" style={{ width: `${e.redHp}%`, opacity: e.redOpacity }} />
@@ -998,9 +1017,12 @@ export default function Battle(props: {
               </div>
               <div
                 class={`fighter${e.ko ? ' ko' : ''}${
-                  jumping() && e.id === championId() ? ' jumping' : ''
+                  jumping() && championIds().includes(e.id) ? ' jumping' : ''
                 }${e.lift > 0 ? ' airborne' : ''}${
-                  e.movementType === 'wobble' || e.movementType === 'jump' || e.movementType === 'float'
+                  e.movementType === 'wobble' ||
+                  e.movementType === 'jump' ||
+                  e.movementType === 'float' ||
+                  e.movementType === 'slither'
                     ? ` move-${e.movementType}`
                     : ''
                 }`}

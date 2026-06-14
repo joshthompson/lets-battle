@@ -1,47 +1,85 @@
 /* ---------- Intro ---------- */
 
 .intro {
-  align-items: center;
-  justify-content: center;
   background: #0a0a0a;
 }
 
-/* Each fighter gets an angled, full-height colour column. The panel spans the
-   whole screen and is clipped (inline clip-path) to its slanted slice; the
-   speed streaks inside ride along, clipped to the same shape. */
-.intro-panel {
+/* One team per slide: a full-screen block of the team's colour. */
+.intro-team {
   position: absolute;
   inset: 0;
-  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
 }
 
-/* White slash drawn over the seam between two columns. */
-.intro-divider {
-  position: absolute;
-  inset: 0;
+.intro-team-title {
+  position: relative;
   z-index: 2;
-  background: #fff;
-  pointer-events: none;
+  font-size: 84px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 8px;
+  color: #fff;
+  text-shadow: 5px 5px 0 rgba(0, 0, 0, 0.5);
+  animation: intro-drop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both;
 }
 
-/* Centres a fighter card over its column. Positioned (not clipped) so a long
-   name can spill past the slant instead of being sliced off. `left` is set
-   inline to the column's mid-point. */
-.intro-slot {
+.intro-team-row {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 36px;
+  justify-content: center;
+  align-items: flex-end;
+  max-width: 92vw;
+}
+
+.intro-team-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+/* Interlocking honeycomb for a six-strong team. Cards are absolutely placed so
+   the middle pair overlaps the rows above/below. The box size and positions
+   (and their scaling) live in TeamLineup.tsx. */
+.intro-team-hex {
+  position: relative;
+  z-index: 2;
+}
+
+.intro-team-hex-slot {
   position: absolute;
-  top: 50%;
-  z-index: 3;
-  transform: translate(-50%, -50%);
-  width: max-content;
-  max-width: 40%;
+  transform: translateX(-50%);
 }
 
-.intro-slot--2 {
-  max-width: 46%;
+/* Fallen team-mates (victory line-up): rotation is applied inline per fighter;
+   here we grey and dim them so they read as knocked out, not celebrating. */
+.intro-team-card.ko {
+  opacity: 0.6;
 }
 
-.intro-slot--3 {
-  max-width: 31%;
+.intro-team-card.ko .intro-fighter-anim {
+  filter: grayscale(100%) brightness(0.8);
+}
+
+/* Keep each fighter's name on one line so the wider spacing actually separates
+   them rather than letting long names wrap and re-collide. */
+.intro-team-hex .intro-team-name {
+  white-space: nowrap;
+}
+
+.intro-team-name {
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  color: #fff;
+  text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.5);
 }
 
 .skip-intro-btn {
@@ -88,27 +126,7 @@
   }
 }
 
-.intro-card {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  animation: intro-enter 0.5s cubic-bezier(0.2, 1.4, 0.4, 1);
-}
-
-@keyframes intro-enter {
-  from {
-    transform: translateX(-120px) scale(0.8);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0) scale(1);
-    opacity: 1;
-  }
-}
-
-/* A pool of entrance animations; Intro picks a different one per fighter. */
+/* A pool of entrance animations; the title and each fighter card pick one. */
 @keyframes intro-left {
   from {
     transform: translateX(-160px) scale(0.8);
@@ -228,6 +246,22 @@
     animation-duration: 1.3s;
     animation-timing-function: ease-in-out;
   }
+
+  /* pulse: a steady breathing scale, growing from the feet */
+  &.sprite-pulse {
+    transform-origin: 50% 100%;
+    animation-name: sprite-pulse;
+    animation-duration: 1s;
+    animation-timing-function: ease-in-out;
+  }
+
+  /* sway: a pendulum slide side to side, like shifting weight foot to foot */
+  &.sprite-sway {
+    transform-origin: 50% 100%;
+    animation-name: sprite-sway;
+    animation-duration: 1.2s;
+    animation-timing-function: ease-in-out;
+  }
 }
 
 @keyframes sprite-spring {
@@ -308,58 +342,22 @@
   }
 }
 
-.intro-name {
-  margin-top: 32px;
-  font-size: 72px;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 6px;
-  color: #fff;
-  text-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+@keyframes sprite-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.12);
+  }
 }
 
-.intro-by {
-  margin-top: 6px;
-  font-size: 24px;
-  font-weight: 600;
-  font-style: italic;
-  letter-spacing: 2px;
-  color: #fff;
-  opacity: 0.75;
-  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.4);
+@keyframes sprite-sway {
+  0%,
+  100% {
+    transform: translateX(-14px) rotate(-2deg);
+  }
+  50% {
+    transform: translateX(14px) rotate(2deg);
+  }
 }
-
-.intro-vs {
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: 4px;
-  opacity: 0.8;
-  margin-top: 8px;
-}
-
-/* Tighten the card text as columns get narrower so names stay on their column. */
-.intro-slot--2 .intro-name {
-  font-size: 52px;
-  letter-spacing: 4px;
-  margin-top: 24px;
-}
-.intro-slot--2 .intro-by {
-  font-size: 20px;
-}
-.intro-slot--2 .intro-vs {
-  font-size: 22px;
-}
-
-.intro-slot--3 .intro-name {
-  font-size: 34px;
-  letter-spacing: 2px;
-  margin-top: 16px;
-}
-.intro-slot--3 .intro-by {
-  font-size: 16px;
-}
-.intro-slot--3 .intro-vs {
-  font-size: 16px;
-  margin-top: 4px;
-}
-
