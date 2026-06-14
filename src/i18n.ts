@@ -70,7 +70,7 @@ const STRINGS = {
   gameArtByName: { en: 'Olesia and Josh', ru: 'Олесия и Джош' },
   characterArtBy: { en: 'Character Art by:', ru: 'Художники персонажей:' },
   and: { en: 'and', ru: 'и' },
-  title: { en: "Let's Battle", ru: 'Пора в бой!' },
+  title: { en: "Let's Battle!", ru: 'Пора в бой!' },
 } as const satisfies Record<string, LocaleText>;
 
 export type StringKey = keyof typeof STRINGS;

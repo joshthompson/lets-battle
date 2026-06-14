@@ -12,6 +12,7 @@ import HowItWorks from './HowItWorks';
 import './styles/index.css';
 
 type Phase = 'menu' | 'intro' | 'battle' | 'victory' | 'draw' | 'credits' | 'gallery' | 'howItWorks';
+const firstPhase: Phase = 'menu';
 
 // Dev toggle: jump straight from the menu into the battle, skipping the intro.
 const SKIP_INTRO = false;
@@ -23,7 +24,7 @@ const BASE_W = 1200;
 const BASE_H = 800;
 
 const App: Component = () => {
-  const [phase, setPhase] = createSignal<Phase>('menu');
+  const [phase, setPhase] = createSignal<Phase>(firstPhase);
   const [roster, setRoster] = createSignal<Battler[]>([]);
   // The winning team — survivors and fallen, all sharing an artist.
   const [winningTeam, setWinningTeam] = createSignal<WinningMember[]>([]);
