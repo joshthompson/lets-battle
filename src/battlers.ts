@@ -13,6 +13,8 @@ import chickenPantsImg from './assets/battlers/chicken-pants.png';
 import fergusImg from './assets/battlers/fergus.png';
 import coolGooseImg from './assets/battlers/cool-goose.png';
 import annaImg from './assets/battlers/anna.png';
+import blubberImg from './assets/battlers/blubber.png';
+import fasionPawsImg from './assets/battlers/fashion-paws.png';
 import blubeeBeeImg from './assets/battlers/blubee-bee.png';
 import vanyaAndRexImg from './assets/battlers/vanya-and-rex.png';
 import mrsFeatherbowImg from './assets/battlers/mrs-featherbow.png';
@@ -176,6 +178,18 @@ const ARTIST_BATTLERS: Artist[] = [
         name: { en: 'Anna', ru: 'Анна' },
         color: '#FF69B4',
         imageUrl: annaImg,
+        movementType: 'jump',
+      },
+      {
+        name: { en: 'Fashion Paws', ru: 'Модные Лапки' },
+        color: '#DFD643',
+        imageUrl: fasionPawsImg,
+        movementType: 'wobble',
+      },
+      {
+        name: { en: 'Blubber', ru: 'Ворвашка' },
+        color: '#E1F4F7',
+        imageUrl: blubberImg,
         movementType: 'jump',
       },
     ],

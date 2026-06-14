@@ -34,6 +34,7 @@
   flex-wrap: wrap;
   justify-content: center;
   gap: 20px 12px;
+  padding-bottom: 40px;
 }
 
 .gallery-group {
@@ -42,11 +43,10 @@
 }
 
 .gallery-artist {
-  margin: 0 0 6px;
+  margin: 0 0 10px;
   font-size: 26px;
   font-weight: 800;
   letter-spacing: 1px;
-  text-align: left;
   color: #ffd24d;
   border-bottom: 2px solid rgba(255, 255, 255, 0.15);
   text-align: center;
@@ -70,6 +70,61 @@
   background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  outline: 5px solid white;
+  
+  transform-style: preserve-3d;
+  &:hover {
+    transform: rotateY(360deg) translateZ(100px) scale(1.25);
+    animation: card-hover 1.5s linear infinite;
+  }
+}
+
+.gallery-card-outer {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.2s ease-out;
+  &:hover {
+    transform: rotateY(0deg) translateZ(100px) scale(1.3);
+    z-index: 100;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    /* Diagonal semi-transparent white beam of light */
+    background: linear-gradient(
+      115deg,
+      rgba(255, 255, 255, 0) 30%,
+      rgba(255, 255, 255, 0.18) 45%,
+      rgba(255, 255, 255, 0.35) 50%,
+      rgba(255, 255, 255, 0.18) 55%,
+      rgba(255, 255, 255, 0) 70%
+    );
+    pointer-events: none;
+    border-radius: 8px;
+    transform-style: preserve-3d;
+    opacity: 0;
+    transition: opacity 0.2s ease-out;
+  }
+
+  &:has(:hover)::after {
+    transform: rotateY(360deg) translateZ(100px) scale(1.25);
+    animation: card-hover 1.5s linear infinite, light-shimmer 1.5s linear infinite;
+    opacity: 1;
+  }
+}
+
+@keyframes card-hover {
+  0%, 50%, 100% { transform: matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1) }
+  25% { transform: matrix3d(1, 0, 0, 0.001, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1) }
+  75% { transform: matrix3d(1, 0, 0, -0.001, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1) }
+}
+
+@keyframes light-shimmer {
+  0%, 50%, 100% { inset: 0; }
+  25% { inset: 0 -5px 0 0; }
+  75% { inset: 0 0 0 -5px; }
 }
 
 .gallery-name {

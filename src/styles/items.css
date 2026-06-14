@@ -75,6 +75,33 @@
   }
 }
 
+/* Orbiting sword held by a fighter. The wrapper is a zero-size anchor at the
+   orbit centre; the inline transform places it on the circle around the holder
+   (and scales it for depth), while the img is centred on that point. */
+.sword-orbit {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.sword-orbit-img {
+  position: absolute;
+  /* Centre the blade on the orbit point (the parent's origin) so the matrix3d
+     rotates it about its own middle. */
+  left: 0;
+  top: 0;
+  width: 40px;
+  height: 40px;
+  margin-left: -20px;
+  margin-top: -20px;
+  object-fit: contain;
+  transform-origin: center center;
+  /* Show the reverse of the blade when the orbit carries it round the back. */
+  backface-visibility: visible;
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.5)) brightness(1.25);
+}
+
 /* Bomb blast — a short frame-by-frame burst centred where the bomb landed. */
 .explosion {
   position: absolute;

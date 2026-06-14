@@ -9,8 +9,9 @@ import bearTrapOpenImg from './assets/items/bear-trap-open.png';
 import bearTrapClosedImg from './assets/items/bear-trap-closed.png';
 import bombImg from './assets/items/bomb.png';
 import springImg from './assets/items/spring.png';
+import swordImg from './assets/items/sword.png';
 
-export type ItemType = 'health' | 'shield' | 'strength' | 'speed' | 'beartrap' | 'bomb' | 'spring';
+export type ItemType = 'health' | 'shield' | 'strength' | 'speed' | 'beartrap' | 'bomb' | 'spring' | 'sword';
 
 export interface ItemDef {
   type: ItemType;
@@ -29,6 +30,7 @@ export const ITEMS: ItemDef[] = [
   { type: 'beartrap', imageUrl: bearTrapOpenImg, closedImageUrl: bearTrapClosedImg, moves: false },
   { type: 'bomb', imageUrl: bombImg },
   { type: 'spring', imageUrl: springImg, moves: false },
+  { type: 'sword', imageUrl: swordImg },
 ];
 
 // Look up a definition by type.
@@ -46,6 +48,8 @@ export const LAUNCHER_ITEMS: ItemType[] = [
   'beartrap',
   'bomb',
   'bomb',
+  'sword',
+  'sword',
   'spring',
   'spring',
   'spring',

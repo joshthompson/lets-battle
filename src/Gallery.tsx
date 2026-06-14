@@ -24,9 +24,11 @@ export default function Gallery(props: { onDone: () => void; width: number; heig
               <div class="gallery-grid">
                 <For each={group.battlers}>
                   {(b) => (
-                    <div class="gallery-card" style={{ background: backgroundGradient(b.color) }}>
-                      <BattlerSprite battler={b} class="gallery-sprite" width={120} height={150} />
-                      <span class="gallery-name">{tx(b.name)}</span>
+                    <div class="gallery-card-outer">
+                      <div class="gallery-card" style={{ background: backgroundGradient(b.color) }}>
+                        <BattlerSprite battler={b} class="gallery-sprite" width={120} height={150} />
+                        <span class="gallery-name">{tx(b.name)}</span>
+                      </div>
                     </div>
                   )}
                 </For>

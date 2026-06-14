@@ -84,7 +84,7 @@ const SPRING_REST_SCALE = 0.3; // resting yScale — compressed flat on the floo
 const SPRING_ANIM_MS = 700; // duration of the expand-and-settle "boing"
 const SPRING_AIR_MS = 2000; // how long a launched fighter is airborne
 const SPRING_AIR_HEIGHT = 260; // peak height of the launch arc, px
-const SPRING_MAX_USES = 2; // distinct fighters it can launch before it's spent
+const SPRING_MAX_USES = 3; // distinct fighters it can launch before it's spent
 const SPRING_HOLD_MS = 1000; // after its last use, how long before it fades
 const SPRING_FADE_MS = 400; // fade-out duration once spent
 
@@ -110,6 +110,16 @@ function springScaleY(elapsed: number): number {
   }
   return SPRING_REST_SCALE;
 }
+
+// --- sword (launcher-only): orbits whoever picks it up, slashing rivals ---
+const SWORD_IMG = getItem('sword').imageUrl;
+const SWORD_SPIN_MS = 1000; // one full orbit around the holder
+const SWORD_DURATION_MS = 5000; // how long the holder keeps the sword
+const SWORD_FADE_MS = 500; // fade-out once the duration is up
+const SWORD_RADIUS = 46; // orbit radius around the holder, px
+const SWORD_PERSPECTIVE = 600; // 3D perspective depth for the orbit, px
+const SWORD_DAMAGE = 5; // health a rival loses on contact
+const SWORD_HIT_RANGE = 30; // distance from the blade to a rival's feet to land a hit
 
 // --- bomb (launcher-only): detonates where it lands ---
 const BOMB_DAMAGE = 20; // peak damage at the blast centre
@@ -200,6 +210,13 @@ interface Entity extends Battler {
   airToX: number; // landing target
   airToY: number;
   lift: number; // current height above the floor (display; 0 on the ground)
+  // sword (orbits the holder, slashing rivals it sweeps through):
+  swordStart: number; // timestamp the sword was picked up (0 = none); drives the orbit angle
+  swordUntil: number; // timestamp the sword stops dealing damage (then it fades out)
+  swordRotation: number; // current orbit index; rivals can be hit once per rotation
+  swordHitIds: number[]; // rivals already struck during the current rotation
+  swordAngle: number; // display: current orbit angle, radians
+  swordOpacity: number; // display: sword opacity (1, ramps to 0 during the fade)
 }
 
 function randomHeading(): { vx: number; vy: number } {
@@ -258,6 +275,12 @@ export default function Battle(props: {
       airToX: 0,
       airToY: 0,
       lift: 0,
+      swordStart: 0,
+      swordUntil: 0,
+      swordRotation: 0,
+      swordHitIds: [],
+      swordAngle: 0,
+      swordOpacity: 0,
     };
   });
 
@@ -346,6 +369,12 @@ export default function Battle(props: {
   let finished = false;
   const timers: ReturnType<typeof setTimeout>[] = [];
 
+  // Screen-y of the middle of a fighter's body, where the orbiting sword rides.
+  // e.y is the centre of the 90px box; the sprite is bottom-anchored, so its feet
+  // sit at e.y + FIGHTER_MAX_H/2 and its mid-body is half a sprite-height above that.
+  const bodyMidY = (e: Entity) =>
+    e.y + FIGHTER_MAX_H / 2 - ((sizes[e.id]?.h ?? FIGHTER_MAX_H) * e.scale) / 2;
+
   // Apply a collected item's effect to the fighter.
   const applyEffect = (e: Entity, type: ItemType, now: number) => {
     if (type === 'health') {
@@ -357,6 +386,11 @@ export default function Battle(props: {
       e.strengthUntil = now + EFFECT_MS;
     } else if (type === 'speed') {
       e.speedUntil = now + EFFECT_MS;
+    } else if (type === 'sword') {
+      e.swordStart = now;
+      e.swordUntil = now + SWORD_DURATION_MS;
+      e.swordRotation = 0;
+      e.swordHitIds = [];
     }
   };
 
@@ -735,6 +769,40 @@ export default function Battle(props: {
           }
         }
 
+        // --- orbiting swords: a held sword sweeps a circle around its holder,
+        // slashing any vulnerable rival it passes through (once per rotation). ---
+        for (const e of alive) {
+          if (now >= e.swordUntil) continue; // no sword, or it has stopped biting
+          // Reset the per-rotation hit list each time a fresh spin begins.
+          const rotation = Math.floor((now - e.swordStart) / SWORD_SPIN_MS);
+          if (rotation !== e.swordRotation) {
+            e.swordRotation = rotation;
+            e.swordHitIds = [];
+          }
+          // The orbit is a turntable around the holder's vertical axis: the blade
+          // swings out to e.x ± SWORD_RADIUS horizontally, riding at mid-body height.
+          const angle = ((now - e.swordStart) / SWORD_SPIN_MS) * Math.PI * 2;
+          const bx = e.x + Math.sin(angle) * SWORD_RADIUS;
+          const by = bodyMidY(e);
+          for (const o of alive) {
+            if (o === e || o.hp <= 0) continue;
+            if (now < o.airUntil) continue; // airborne: invulnerable
+            if (now < o.shieldUntil) continue; // shielded: blade is turned aside
+            if (e.swordHitIds.includes(o.id)) continue; // already cut this rotation
+            if (Math.hypot(bx - o.x, by - bodyMidY(o)) >= SWORD_HIT_RANGE) continue;
+            e.swordHitIds.push(o.id);
+            if (now >= o.redUntil + RED_FADE_MS) o.redHp = o.hp;
+            o.redUntil = now + RED_HOLD_MS;
+            o.hp = Math.max(0, o.hp - SWORD_DAMAGE);
+            o.flashUntil = now + FLASH_MS;
+            if (o.hp <= 0) {
+              o.ko = true;
+              o.koDir = Math.random() < 0.5 ? 1 : -1;
+              o.koAt = now;
+            }
+          }
+        }
+
         // --- collect items / spring traps ---
         for (const e of alive) {
           if (now < e.airUntil) continue; // airborne: can't collect or trigger
@@ -803,6 +871,20 @@ export default function Battle(props: {
 
           const scale = now < e.strengthUntil ? STRENGTH_SCALE : 1;
           if (e.scale !== scale) e.scale = scale;
+
+          // Sword: keep spinning while held, then fade out over SWORD_FADE_MS.
+          if (e.swordStart) {
+            e.swordAngle = ((now - e.swordStart) / SWORD_SPIN_MS) * Math.PI * 2;
+            if (now < e.swordUntil) {
+              e.swordOpacity = 1;
+            } else if (now < e.swordUntil + SWORD_FADE_MS) {
+              e.swordOpacity = 1 - (now - e.swordUntil) / SWORD_FADE_MS;
+            } else {
+              // Fully faded: retire the sword.
+              e.swordStart = 0;
+              e.swordOpacity = 0;
+            }
+          }
         }
       }),
     );
@@ -987,6 +1069,46 @@ export default function Battle(props: {
                 />
               </div>
             </div>
+          )}
+        </For>
+
+        {/* Orbiting swords. Each rides a 3D turntable around its holder via a
+            matrix3d (rotateY · translateZ): the blade always faces radially
+            outward, sweeping in front of the holder (drawn over) and behind it
+            (drawn under), and fades out when the holder's time is up. */}
+        <For each={entities}>
+          {(e) => (
+            <Show when={e.swordStart > 0}>
+              <div
+                class="sword-orbit"
+                style={{
+                  left: `${e.x}px`,
+                  // Ride at the middle of the holder's body, not at its feet.
+                  top: `${bodyMidY(e)}px`,
+                  perspective: `${SWORD_PERSPECTIVE}px`,
+                  // In front of the holder while swinging toward the viewer (cos > 0),
+                  // behind it on the far half of the orbit.
+                  'z-index': Math.round(e.y) + (Math.cos(e.swordAngle) >= 0 ? 1 : -1),
+                  opacity: e.swordOpacity,
+                }}
+              >
+                <img
+                  class="sword-orbit-img"
+                  src={SWORD_IMG}
+                  alt="sword"
+                  draggable={false}
+                  // rotateY(angle)·translateZ(radius), written out as a matrix3d so the
+                  // blade orbits the vertical axis and keeps facing outward.
+                  style={{
+                    transform: `matrix3d(${Math.cos(e.swordAngle)},0,${-Math.sin(e.swordAngle)},0, 0,1,0,0, ${Math.sin(
+                      e.swordAngle,
+                    )},0,${Math.cos(e.swordAngle)},0, ${Math.sin(e.swordAngle) * SWORD_RADIUS},0,${
+                      Math.cos(e.swordAngle) * SWORD_RADIUS
+                    },1)`,
+                  }}
+                />
+              </div>
+            </Show>
           )}
         </For>
 
