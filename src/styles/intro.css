@@ -3,13 +3,52 @@
 .intro {
   align-items: center;
   justify-content: center;
+  background: #0a0a0a;
+}
+
+/* Each fighter gets an angled, full-height colour column. The panel spans the
+   whole screen and is clipped (inline clip-path) to its slanted slice; the
+   speed streaks inside ride along, clipped to the same shape. */
+.intro-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+/* White slash drawn over the seam between two columns. */
+.intro-divider {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: #fff;
+  pointer-events: none;
+}
+
+/* Centres a fighter card over its column. Positioned (not clipped) so a long
+   name can spill past the slant instead of being sliced off. `left` is set
+   inline to the column's mid-point. */
+.intro-slot {
+  position: absolute;
+  top: 50%;
+  z-index: 3;
+  transform: translate(-50%, -50%);
+  width: max-content;
+  max-width: 40%;
+}
+
+.intro-slot--2 {
+  max-width: 46%;
+}
+
+.intro-slot--3 {
+  max-width: 31%;
 }
 
 .skip-intro-btn {
   position: absolute;
   bottom: 20px;
   right: 20px;
-  z-index: 3;
+  z-index: 5;
   padding: 8px 16px;
   font-size: 14px;
   font-weight: 700;
@@ -296,5 +335,31 @@
   letter-spacing: 4px;
   opacity: 0.8;
   margin-top: 8px;
+}
+
+/* Tighten the card text as columns get narrower so names stay on their column. */
+.intro-slot--2 .intro-name {
+  font-size: 52px;
+  letter-spacing: 4px;
+  margin-top: 24px;
+}
+.intro-slot--2 .intro-by {
+  font-size: 20px;
+}
+.intro-slot--2 .intro-vs {
+  font-size: 22px;
+}
+
+.intro-slot--3 .intro-name {
+  font-size: 34px;
+  letter-spacing: 2px;
+  margin-top: 16px;
+}
+.intro-slot--3 .intro-by {
+  font-size: 16px;
+}
+.intro-slot--3 .intro-vs {
+  font-size: 16px;
+  margin-top: 4px;
 }
 
